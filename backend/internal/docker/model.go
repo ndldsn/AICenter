@@ -87,3 +87,17 @@ type ContainerFilters struct {
 	HostID string
 	States []string // e.g. ["running"], empty = all
 }
+
+// ComposeProject is a docker-compose project managed through the platform.
+type ComposeProject struct {
+	ID         string            `json:"id"`
+	Name       string            `json:"name"`
+	HostID     string            `json:"host_id"`
+	Content    string            `json:"content"`  // docker-compose YAML
+	Services   []string          `json:"services"` // service names parsed from YAML
+	Status     string            `json:"status"`   // running | stopped | error
+	ProjectDir string            `json:"project_dir,omitempty"`
+	Labels     map[string]string `json:"labels,omitempty"`
+	Created    int64             `json:"created"` // unix seconds
+	Updated    int64             `json:"updated"` // unix seconds
+}

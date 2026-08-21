@@ -7,6 +7,7 @@ import (
 	"github.com/aicenter/aicenter/internal/api/middleware"
 	"github.com/aicenter/aicenter/internal/config"
 	"github.com/aicenter/aicenter/internal/pkg/logger"
+	"github.com/aicenter/aicenter/internal/service"
 	"github.com/aicenter/aicenter/internal/websocket"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
@@ -65,7 +66,7 @@ func Setup(cfg *config.Config, db *sql.DB, hub *websocket.Hub, log *zap.Logger) 
 		serverHandler.RegisterRoutes(protected, middleware.MockAuth())
 
 		// Docker (Phase 3 - real handler)
-		dockerHandler := handler.NewDockerHandler()
+		dockerHandler := handler.NewDockerHandler(service.NewDockerService(hub))
 		dockerHandler.RegisterRoutes(protected, middleware.MockAuth())
 
 		// AI Providers & Models
@@ -117,10 +118,10 @@ func Setup(cfg *config.Config, db *sql.DB, hub *websocket.Hub, log *zap.Logger) 
 
 func handleDashboard(c *gin.Context) {
 	c.JSON(200, gin.H{"message": "Dashboard data - TODO", "stats": gin.H{
-		"servers":   0,
+		"servers":    0,
 		"containers": 0,
-		"agents":    0,
-		"models":    0,
+		"agents":     0,
+		"models":     0,
 	}})
 }
 

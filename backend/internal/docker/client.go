@@ -34,6 +34,15 @@ type Client interface {
 	ListNetworks(ctx context.Context) ([]Network, error)
 	CreateNetwork(ctx context.Context, name, driver string) (*Network, error)
 	DeleteNetwork(ctx context.Context, id string) error
+
+	// Compose
+	ListComposeProjects(ctx context.Context) ([]ComposeProject, error)
+	GetComposeProject(ctx context.Context, id string) (*ComposeProject, error)
+	CreateComposeProject(ctx context.Context, p ComposeProject) (*ComposeProject, error)
+	UpdateComposeProject(ctx context.Context, id string, p ComposeProject) (*ComposeProject, error)
+	DeleteComposeProject(ctx context.Context, id string) error
+	DeployComposeProject(ctx context.Context, id string) error
+	DownComposeProject(ctx context.Context, id string) error
 }
 
 // ClientConfig selects and configures a Client implementation.

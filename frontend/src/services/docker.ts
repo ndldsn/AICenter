@@ -1,4 +1,4 @@
-import { apiGet, apiPost, apiDelete } from './api';
+import { apiGet, apiPost, apiPut, apiDelete } from './api';
 
 // Docker types (mirror of backend/internal/docker/model.go)
 export interface DockerHost {
@@ -68,6 +68,25 @@ export interface DockerNetwork {
     host_id: string;
 }
 
+export interface ComposeProject {
+    id: string;
+    name: string;
+    host_id: string;
+    content: string;
+    services: string[];
+    status: 'running' | 'stopped' | 'error';
+    project_dir?: string;
+    labels?: Record<string, string>;
+    created: number;
+    updated: number;
+}
+
+export interface DockerEvent {
+    type: string; // e.g. "container.start", "compose.deploy"
+    target: string;
+    host_id: string;
+}
+
 export interface ApiResponse<T> {
     code: number;
     message: string;
@@ -128,4 +147,24 @@ export const dockerApi = {
 
     deleteNetwork: (id: string) =>
         apiDelete<ApiResponse<null>>(`/docker/networks/${id}`),
+
+    listCompose: () => apiGet<ApiResponse<PaginatedResponse<ComposeProject>>>('/docker/compose'),
+
+    getCompose: (id: string) =>
+        apiGet<ApiResponse<ComposeProject>>(`/docker/compose/${id}`),
+
+    createCompose: (name: string, content: string) =>
+        apiPost<ApiResponse<ComposeProject>>('/docker/compose', { name, content }),
+
+    updateCompose: (id: string, content: string) =>
+        apiPut<ApiResponse<ComposeProject>>(`/docker/compose/${id}`, { content }),
+
+    deleteCompose: (id: string) =>
+        apiDelete<ApiResponse<null>>(`/docker/compose/${id}`),
+
+    deployCompose: (id: string) =>
+        apiPost<ApiResponse<null>>(`/docker/compose/${id}/deploy`),
+
+    downCompose: (id: string) =>
+        apiPost<ApiResponse<null>>(`/docker/compose/${id}/down`),
 };

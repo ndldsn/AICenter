@@ -1,23 +1,23 @@
 import { useState } from 'react';
-import { Typography, Tabs, Button, Space, Grid } from '@arco-design/web-react';
+import { Typography, Tabs, Button, Space, Grid, Tag, Message } from '@arco-design/web-react';
 import { IconRefresh } from '@arco-design/web-react/icon';
-import { useDockerHosts } from './hooks';
+import { useDockerHosts, useDockerEvents } from './hooks';
 import { ContainerTab } from './ContainerTab';
 import { ImageTab } from './ImageTab';
 import { VolumeTab } from './VolumeTab';
 import { NetworkTab } from './NetworkTab';
+import { ComposeTab } from './ComposeTab';
 
 const { Title, Paragraph } = Typography;
 
 export default function DockerDashboardPage() {
     const [activeTab, setActiveTab] = useState('containers');
     const { data: hosts, refetch: refetchHosts } = useDockerHosts();
+    const { connected } = useDockerEvents((event) => {
+        Message.info(`Docker: ${event.type} — ${event.target}`);
+    });
 
     const onlineHosts = (hosts ?? []).filter((h) => h.status === 'online').length;
-
-    const refresh = () => {
-        refetchHosts();
-    };
 
     return (
         <Space direction="vertical" size={16} style={{ width: '100%' }}>
@@ -25,11 +25,14 @@ export default function DockerDashboardPage() {
                 <div>
                     <Title heading={4}>Docker</Title>
                     <Paragraph type="secondary">
-                        Manage containers, images, volumes, and networks
+                        Manage containers, images, volumes, networks, and compose projects
                     </Paragraph>
                 </div>
                 <Space>
-                    <Button icon={<IconRefresh />} onClick={refresh}>
+                    <Tag color={connected ? 'green' : 'red'} style={{ marginRight: 0 }}>
+                        {connected ? 'Live' : 'Connecting…'}
+                    </Tag>
+                    <Button icon={<IconRefresh />} onClick={() => refetchHosts()}>
                         Refresh
                     </Button>
                 </Space>
@@ -64,6 +67,9 @@ export default function DockerDashboardPage() {
                 </Tabs.TabPane>
                 <Tabs.TabPane key="networks" title="Networks">
                     <NetworkTab />
+                </Tabs.TabPane>
+                <Tabs.TabPane key="compose" title="Compose">
+                    <ComposeTab />
                 </Tabs.TabPane>
             </Tabs>
         </Space>

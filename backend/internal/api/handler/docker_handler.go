@@ -3,6 +3,7 @@ package handler
 import (
 	"strconv"
 
+	"github.com/aicenter/aicenter/internal/docker"
 	"github.com/aicenter/aicenter/internal/service"
 	"github.com/gin-gonic/gin"
 )
@@ -13,8 +14,8 @@ type DockerHandler struct {
 }
 
 // NewDockerHandler creates a new docker handler.
-func NewDockerHandler() *DockerHandler {
-	return &DockerHandler{svc: service.NewDockerService()}
+func NewDockerHandler(svc *service.DockerService) *DockerHandler {
+	return &DockerHandler{svc: svc}
 }
 
 // RegisterRoutes registers docker routes under the given group.
@@ -38,6 +39,13 @@ func (h *DockerHandler) RegisterRoutes(r *gin.RouterGroup, authMiddleware gin.Ha
 		docker.GET("/networks", h.ListNetworks)
 		docker.POST("/networks", h.CreateNetwork)
 		docker.DELETE("/networks/:id", h.DeleteNetwork)
+		docker.GET("/compose", h.ListCompose)
+		docker.GET("/compose/:id", h.GetCompose)
+		docker.POST("/compose", h.CreateCompose)
+		docker.PUT("/compose/:id", h.UpdateCompose)
+		docker.DELETE("/compose/:id", h.DeleteCompose)
+		docker.POST("/compose/:id/deploy", h.DeployCompose)
+		docker.POST("/compose/:id/down", h.DownCompose)
 	}
 }
 
@@ -272,4 +280,119 @@ func (h *DockerHandler) DeleteNetwork(c *gin.Context) {
 		return
 	}
 	c.JSON(200, gin.H{"code": 0, "message": "deleted"})
+}
+
+// --- Compose ---
+
+// ListCompose handles GET /api/v1/docker/compose
+func (h *DockerHandler) ListCompose(c *gin.Context) {
+	list, err := h.svc.ListComposeProjects(c.Request.Context())
+	if err != nil {
+		c.JSON(500, gin.H{"code": 500, "message": err.Error()})
+		return
+	}
+	c.JSON(200, gin.H{"code": 0, "message": "success", "data": gin.H{"items": list, "total": len(list)}})
+}
+
+// GetCompose handles GET /api/v1/docker/compose/:id
+func (h *DockerHandler) GetCompose(c *gin.Context) {
+	p, err := h.svc.GetComposeProject(c.Request.Context(), c.Param("id"))
+	if err != nil {
+		if err.Error() == "container not found" {
+			c.JSON(404, gin.H{"code": 404, "message": "compose project not found"})
+			return
+		}
+		c.JSON(500, gin.H{"code": 500, "message": err.Error()})
+		return
+	}
+	c.JSON(200, gin.H{"code": 0, "message": "success", "data": p})
+}
+
+// CreateCompose handles POST /api/v1/docker/compose
+func (h *DockerHandler) CreateCompose(c *gin.Context) {
+	var req struct {
+		Name    string `json:"name"`
+		Content string `json:"content"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(400, gin.H{"code": 400, "message": "invalid request body"})
+		return
+	}
+	if req.Name == "" || req.Content == "" {
+		c.JSON(400, gin.H{"code": 400, "message": "name and content are required"})
+		return
+	}
+	p, err := h.svc.CreateComposeProject(c.Request.Context(), docker.ComposeProject{
+		Name:    req.Name,
+		Content: req.Content,
+	})
+	if err != nil {
+		c.JSON(400, gin.H{"code": 400, "message": err.Error()})
+		return
+	}
+	c.JSON(200, gin.H{"code": 0, "message": "created", "data": p})
+}
+
+// UpdateCompose handles PUT /api/v1/docker/compose/:id
+func (h *DockerHandler) UpdateCompose(c *gin.Context) {
+	var req struct {
+		Name    string `json:"name"`
+		Content string `json:"content"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(400, gin.H{"code": 400, "message": "invalid request body"})
+		return
+	}
+	p, err := h.svc.UpdateComposeProject(c.Request.Context(), c.Param("id"), docker.ComposeProject{
+		Name:    req.Name,
+		Content: req.Content,
+	})
+	if err != nil {
+		if err.Error() == "container not found" {
+			c.JSON(404, gin.H{"code": 404, "message": "compose project not found"})
+			return
+		}
+		c.JSON(400, gin.H{"code": 400, "message": err.Error()})
+		return
+	}
+	c.JSON(200, gin.H{"code": 0, "message": "updated", "data": p})
+}
+
+// DeleteCompose handles DELETE /api/v1/docker/compose/:id
+func (h *DockerHandler) DeleteCompose(c *gin.Context) {
+	if err := h.svc.DeleteComposeProject(c.Request.Context(), c.Param("id")); err != nil {
+		if err.Error() == "container not found" {
+			c.JSON(404, gin.H{"code": 404, "message": "compose project not found"})
+			return
+		}
+		c.JSON(500, gin.H{"code": 500, "message": err.Error()})
+		return
+	}
+	c.JSON(200, gin.H{"code": 0, "message": "deleted"})
+}
+
+// DeployCompose handles POST /api/v1/docker/compose/:id/deploy
+func (h *DockerHandler) DeployCompose(c *gin.Context) {
+	if err := h.svc.DeployComposeProject(c.Request.Context(), c.Param("id")); err != nil {
+		if err.Error() == "container not found" {
+			c.JSON(404, gin.H{"code": 404, "message": "compose project not found"})
+			return
+		}
+		c.JSON(500, gin.H{"code": 500, "message": err.Error()})
+		return
+	}
+	c.JSON(200, gin.H{"code": 0, "message": "deployed"})
+}
+
+// DownCompose handles POST /api/v1/docker/compose/:id/down
+func (h *DockerHandler) DownCompose(c *gin.Context) {
+	if err := h.svc.DownComposeProject(c.Request.Context(), c.Param("id")); err != nil {
+		if err.Error() == "container not found" {
+			c.JSON(404, gin.H{"code": 404, "message": "compose project not found"})
+			return
+		}
+		c.JSON(500, gin.H{"code": 500, "message": err.Error()})
+		return
+	}
+	c.JSON(200, gin.H{"code": 0, "message": "stopped"})
 }

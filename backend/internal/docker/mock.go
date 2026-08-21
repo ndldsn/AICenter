@@ -3,10 +3,14 @@ package docker
 import (
 	"context"
 	"errors"
+	"fmt"
 	"regexp"
+	"sort"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/goccy/go-yaml"
 )
 
 // MockClient is an in-memory Docker client used when no local daemon is available.
@@ -18,10 +22,12 @@ type MockClient struct {
 	images     []Image
 	volumes    []Volume
 	networks   []Network
+	compose    map[string]*ComposeProject
 }
 
 // NewMockClient builds a client pre-seeded with realistic container data.
 func NewMockClient() *MockClient {
+	now := time.Now().Unix()
 	c := &MockClient{
 		details: make(map[string]*ContainerDetail),
 		images: []Image{
@@ -92,6 +98,19 @@ func NewMockClient() *MockClient {
 			Network:   map[string]string{"bridge": "aicenter_default"},
 			Logs:      "[" + s.Name + "] mock container log line\n",
 		}
+	}
+
+	c.compose = map[string]*ComposeProject{
+		"compose-demo-stack": {
+			ID:       "compose-demo-stack",
+			Name:     "demo-stack",
+			HostID:   "srv-demo-001",
+			Status:   "running",
+			Content:  "services:\n  web:\n    image: nginx:1.27\n    ports:\n      - \"8080:80\"\n  api:\n    image: aicenter/api:1.4.2\n    environment:\n      - DB_HOST=db\n  db:\n    image: mysql:8.0\n    environment:\n      MYSQL_ROOT_PASSWORD: changeme\n",
+			Services: []string{"api", "db", "web"},
+			Created:  now - 86_400,
+			Updated:  now - 3_600,
+		},
 	}
 	return c
 }
@@ -320,4 +339,137 @@ func (m *MockClient) DeleteNetwork(ctx context.Context, id string) error {
 func sanitize(s string) string {
 	re := regexp.MustCompile(`[^a-zA-Z0-9._-]+`)
 	return strings.ToLower(re.ReplaceAllString(s, "-"))
+}
+
+// ---- Compose ----
+
+func (m *MockClient) ListComposeProjects(ctx context.Context) ([]ComposeProject, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	out := make([]ComposeProject, 0, len(m.compose))
+	for _, p := range m.compose {
+		cp := *p
+		out = append(out, cp)
+	}
+	return out, nil
+}
+
+func (m *MockClient) GetComposeProject(ctx context.Context, id string) (*ComposeProject, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	p, ok := m.compose[id]
+	if !ok {
+		return nil, ErrNotFound
+	}
+	cp := *p
+	return &cp, nil
+}
+
+func (m *MockClient) CreateComposeProject(ctx context.Context, p ComposeProject) (*ComposeProject, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if p.Name == "" {
+		return nil, errors.New("compose project name is required")
+	}
+	if strings.TrimSpace(p.Content) == "" {
+		return nil, errors.New("compose file content is required")
+	}
+	services, err := parseComposeServices(p.Content)
+	if err != nil {
+		return nil, err
+	}
+	now := time.Now().Unix()
+	cp := ComposeProject{
+		ID:         "compose-" + sanitize(p.Name),
+		Name:       p.Name,
+		HostID:     "srv-demo-001",
+		Content:    p.Content,
+		Services:   services,
+		Status:     "stopped",
+		ProjectDir: "/opt/aicenter/compose/" + sanitize(p.Name),
+		Created:    now,
+		Updated:    now,
+	}
+	m.compose[cp.ID] = &cp
+	return &cp, nil
+}
+
+func (m *MockClient) UpdateComposeProject(ctx context.Context, id string, p ComposeProject) (*ComposeProject, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	cp, ok := m.compose[id]
+	if !ok {
+		return nil, ErrNotFound
+	}
+	if p.Name != "" {
+		cp.Name = p.Name
+	}
+	if strings.TrimSpace(p.Content) != "" {
+		services, err := parseComposeServices(p.Content)
+		if err != nil {
+			return nil, err
+		}
+		cp.Content = p.Content
+		cp.Services = services
+		cp.Status = "stopped" // config changed, needs redeploy
+	}
+	cp.Updated = time.Now().Unix()
+	out := *cp
+	return &out, nil
+}
+
+func (m *MockClient) DeleteComposeProject(ctx context.Context, id string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if _, ok := m.compose[id]; !ok {
+		return ErrNotFound
+	}
+	delete(m.compose, id)
+	return nil
+}
+
+func (m *MockClient) DeployComposeProject(ctx context.Context, id string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	cp, ok := m.compose[id]
+	if !ok {
+		return ErrNotFound
+	}
+	cp.Status = "running"
+	cp.Updated = time.Now().Unix()
+	return nil
+}
+
+func (m *MockClient) DownComposeProject(ctx context.Context, id string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	cp, ok := m.compose[id]
+	if !ok {
+		return ErrNotFound
+	}
+	cp.Status = "stopped"
+	cp.Updated = time.Now().Unix()
+	return nil
+}
+
+// parseComposeServices extracts the service names from a compose YAML document.
+// It deliberately keeps a minimal, strict contract: only the top-level
+// `services:` map keys are read. Malformed YAML returns an error so a project
+// with a broken compose file can never be saved in mock mode.
+func parseComposeServices(content string) ([]string, error) {
+	var doc struct {
+		Services map[string]interface{} `yaml:"services"`
+	}
+	if err := yaml.Unmarshal([]byte(content), &doc); err != nil {
+		return nil, fmt.Errorf("invalid compose YAML: %w", err)
+	}
+	if len(doc.Services) == 0 {
+		return nil, errors.New("compose file must define at least one service under 'services:'")
+	}
+	names := make([]string, 0, len(doc.Services))
+	for name := range doc.Services {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	return names, nil
 }

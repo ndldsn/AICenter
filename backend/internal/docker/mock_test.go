@@ -197,3 +197,85 @@ func TestMockClient_Networks(t *testing.T) {
 		t.Fatalf("DeleteNetwork: %v", err)
 	}
 }
+
+func TestMockClient_Compose(t *testing.T) {
+	c := NewMockClient()
+	ctx := context.Background()
+
+	// Seeded project exists and lists services sorted
+	projects, err := c.ListComposeProjects(ctx)
+	if err != nil {
+		t.Fatalf("ListComposeProjects: %v", err)
+	}
+	if len(projects) != 1 {
+		t.Fatalf("expected 1 seeded compose project, got %d", len(projects))
+	}
+	seed := projects[0]
+	if seed.Status != "running" || len(seed.Services) != 3 {
+		t.Fatalf("unexpected seeded project: %+v", seed)
+	}
+
+	// Create validates YAML and extracts services
+	created, err := c.CreateComposeProject(ctx, ComposeProject{
+		Name:    "monitoring",
+		Content: "services:\n  prometheus:\n    image: prom/prometheus\n  grafana:\n    image: grafana/grafana\n",
+	})
+	if err != nil {
+		t.Fatalf("CreateComposeProject: %v", err)
+	}
+	if len(created.Services) != 2 || created.Services[0] != "grafana" {
+		t.Fatalf("expected sorted services [grafana prometheus], got %v", created.Services)
+	}
+	if created.Status != "stopped" {
+		t.Fatalf("expected new project status stopped, got %s", created.Status)
+	}
+
+	// Invalid YAML is rejected
+	if _, err := c.CreateComposeProject(ctx, ComposeProject{
+		Name:    "bad",
+		Content: "services: [unclosed",
+	}); err == nil {
+		t.Fatal("expected error for invalid YAML")
+	}
+
+	// Deploy / down lifecycle
+	if err := c.DeployComposeProject(ctx, created.ID); err != nil {
+		t.Fatalf("DeployComposeProject: %v", err)
+	}
+	p, err := c.GetComposeProject(ctx, created.ID)
+	if err != nil {
+		t.Fatalf("GetComposeProject: %v", err)
+	}
+	if p.Status != "running" {
+		t.Fatalf("expected running after deploy, got %s", p.Status)
+	}
+	if err := c.DownComposeProject(ctx, created.ID); err != nil {
+		t.Fatalf("DownComposeProject: %v", err)
+	}
+	p, _ = c.GetComposeProject(ctx, created.ID)
+	if p.Status != "stopped" {
+		t.Fatalf("expected stopped after down, got %s", p.Status)
+	}
+
+	// Update resets status to stopped (config changed)
+	if err := c.DeployComposeProject(ctx, created.ID); err != nil {
+		t.Fatalf("re-deploy: %v", err)
+	}
+	updated, err := c.UpdateComposeProject(ctx, created.ID, ComposeProject{
+		Content: "services:\n  prometheus:\n    image: prom/prometheus\n",
+	})
+	if err != nil {
+		t.Fatalf("UpdateComposeProject: %v", err)
+	}
+	if updated.Status != "stopped" || len(updated.Services) != 1 {
+		t.Fatalf("expected stopped + 1 service after update, got %+v", updated)
+	}
+
+	// Delete + not found
+	if err := c.DeleteComposeProject(ctx, created.ID); err != nil {
+		t.Fatalf("DeleteComposeProject: %v", err)
+	}
+	if err := c.DeployComposeProject(ctx, created.ID); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("expected ErrNotFound, got %v", err)
+	}
+}

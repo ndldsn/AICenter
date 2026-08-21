@@ -62,3 +62,24 @@ func (r *RealClient) CreateNetwork(ctx context.Context, name, driver string) (*N
 	return nil, ErrRealUnavailable
 }
 func (r *RealClient) DeleteNetwork(ctx context.Context, id string) error { return ErrRealUnavailable }
+func (r *RealClient) ListComposeProjects(ctx context.Context) ([]ComposeProject, error) {
+	return nil, ErrRealUnavailable
+}
+func (r *RealClient) GetComposeProject(ctx context.Context, id string) (*ComposeProject, error) {
+	return nil, ErrRealUnavailable
+}
+func (r *RealClient) CreateComposeProject(ctx context.Context, p ComposeProject) (*ComposeProject, error) {
+	return nil, ErrRealUnavailable
+}
+func (r *RealClient) UpdateComposeProject(ctx context.Context, id string, p ComposeProject) (*ComposeProject, error) {
+	return nil, ErrRealUnavailable
+}
+func (r *RealClient) DeleteComposeProject(ctx context.Context, id string) error {
+	return ErrRealUnavailable
+}
+func (r *RealClient) DeployComposeProject(ctx context.Context, id string) error {
+	return ErrRealUnavailable
+}
+func (r *RealClient) DownComposeProject(ctx context.Context, id string) error {
+	return ErrRealUnavailable
+}
