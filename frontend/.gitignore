@@ -25,3 +25,6 @@ pnpm-debug.log*
 .env
 .env.local
 .env.*.local
+
+# TS build cache
+*.tsbuildinfo
