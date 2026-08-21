@@ -63,7 +63,7 @@ export default function ServerListPage() {
         {
             title: 'Status',
             dataIndex: 'status',
-            render: (status: string, record: Server) => {
+            render: (status: string, _record: Server) => {
                 const statusConfig: Record<string, { color: string; label: string }> = {
                     online: { color: 'green', label: 'Online' },
                     offline: { color: 'red', label: 'Offline' },
@@ -228,7 +228,7 @@ export default function ServerListPage() {
                         showJumper: true,
                         sizeCanChange: true,
                     }}
-                    emptyText={
+                    noDataElement={
                         <div style={{ padding: 40, textAlign: 'center', color: 'var(--color-text-3)' }}>
                             No servers yet. Click 'Add Server' to get started.
                         </div>

@@ -1,4 +1,4 @@
-import axios, { AxiosError, AxiosRequestConfig } from 'axios';
+import axios, { AxiosError } from 'axios';
 import { Message } from '@arco-design/web-react';
 
 const api = axios.create({
@@ -44,20 +44,23 @@ api.interceptors.response.use(
 );
 
 // HTTP methods
+// Note: the response interceptor already unwraps `response.data`, so the
+// resolved value is the raw body; the casts below reconcile that runtime
+// behavior with the Axios generic types.
 export const apiGet = <T = unknown>(url: string, params?: Record<string, any>): Promise<T> =>
-    api.get(url, { params });
+    api.get(url, { params }) as unknown as Promise<T>;
 
 export const apiPost = <T = unknown>(url: string, data?: any): Promise<T> =>
-    api.post(url, data);
+    api.post(url, data) as unknown as Promise<T>;
 
 export const apiPut = <T = unknown>(url: string, data?: any): Promise<T> =>
-    api.put(url, data);
+    api.put(url, data) as unknown as Promise<T>;
 
 export const apiPatch = <T = unknown>(url: string, data?: any): Promise<T> =>
-    api.patch(url, data);
+    api.patch(url, data) as unknown as Promise<T>;
 
 export const apiDelete = <T = unknown>(url: string): Promise<T> =>
-    api.delete(url);
+    api.delete(url) as unknown as Promise<T>;
 
 export interface ApiError {
     code: number;

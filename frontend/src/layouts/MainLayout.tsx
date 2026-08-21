@@ -2,15 +2,12 @@ import { Suspense } from 'react';
 import { Spin } from '@arco-design/web-react';
 import { Sidebar } from './Sidebar';
 import { Navbar } from './Navbar';
-import { useUIStore } from '@/stores/uiStore';
 
 interface MainLayoutProps {
     children: React.ReactNode;
 }
 
 export function MainLayout({ children }: MainLayoutProps) {
-    const { sidebarCollapsed } = useUIStore();
-
     return (
         <div style={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
             <Sidebar />

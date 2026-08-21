@@ -37,10 +37,20 @@ export default defineConfig(({ mode }) => {
             chunkSizeWarningLimit: 1000,
             rollupOptions: {
                 output: {
-                    manualChunks: {
-                        'react-vendor': ['react', 'react-dom', 'react-router-dom'],
-                        'arco-vendor': ['@arco-design/web-react'],
-                        'echarts-vendor': ['echarts', 'echarts-for-react'],
+                    manualChunks(id: string) {
+                        if (
+                            id.includes('node_modules/react') ||
+                            id.includes('node_modules/react-dom') ||
+                            id.includes('node_modules/react-router')
+                        ) {
+                            return 'react-vendor';
+                        }
+                        if (id.includes('node_modules/@arco-design')) {
+                            return 'arco-vendor';
+                        }
+                        if (id.includes('node_modules/echarts')) {
+                            return 'echarts-vendor';
+                        }
                     },
                 },
             },

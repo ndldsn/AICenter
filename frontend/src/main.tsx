@@ -2,7 +2,6 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import ArcoDesign from '@arco-design/web-react';
 import '@arco-design/web-react/dist/css/arco.css';
 import App from './App';
 import './styles/global.css';

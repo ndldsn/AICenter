@@ -13,7 +13,7 @@ import {
 } from '@arco-design/web-react';
 import { IconDesktop, IconLink } from '@arco-design/web-react/icon';
 import { useCreateServer, useTestNewConnection } from './hooks';
-import { ConnectionTestResult } from '@/services/servers';
+import { ConnectionTestResult, CreateServerRequest } from '@/services/servers';
 
 const { Item } = Form;
 const { TabPane } = Tabs;
@@ -51,8 +51,8 @@ export function AddServerModal({ visible, onClose, server, onSuccess }: AddServe
                 private_key: values.private_key,
             });
 
-            setTestResult(result);
-            if (result.success) {
+            setTestResult(result.data);
+            if (result.data?.success) {
                 Message.success('Connection test successful');
             } else {
                 Message.warning('Connection test failed');
@@ -67,7 +67,7 @@ export function AddServerModal({ visible, onClose, server, onSuccess }: AddServe
     const handleSubmit = async () => {
         try {
             const values = form.getFieldsValue();
-            await createMutation.mutateAsync(values);
+            await createMutation.mutateAsync(values as CreateServerRequest);
             onSuccess();
         } catch (error: any) {
             Message.error(error?.response?.data?.message || 'Failed to create server');
@@ -89,7 +89,7 @@ export function AddServerModal({ visible, onClose, server, onSuccess }: AddServe
             style={{ width: 700 }}
             maskClosable={false}
         >
-            <Tabs defaultActiveKey="basic">
+            <Tabs defaultActiveTab="basic">
                 <TabPane key="basic" title="Basic Info">
                     <Form
                         form={form}

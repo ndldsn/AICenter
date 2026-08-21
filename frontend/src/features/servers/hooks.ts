@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { serverApi, Server, CreateServerRequest, ConnectionTestResult } from '@/services/servers';
+import { serverApi, CreateServerRequest } from '@/services/servers';
 import { Message } from '@arco-design/web-react';
 
 // Hook for server list
@@ -61,7 +61,6 @@ export function useDeleteServer() {
 export function useTestConnection() {
     return useMutation({
         mutationFn: (id: string) => serverApi.testConnection(id),
-        select: (res) => res.data,
     });
 }
 
@@ -70,6 +69,5 @@ export function useTestNewConnection() {
     return useMutation({
         mutationFn: (data: CreateServerRequest) =>
             serverApi.testConnection('test', data),
-        select: (res) => res.data,
     });
 }
