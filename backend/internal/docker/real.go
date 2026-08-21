@@ -36,3 +36,29 @@ func (r *RealClient) StopContainer(ctx context.Context, id string, timeoutSec in
 func (r *RealClient) DeleteContainer(ctx context.Context, id string, force bool) error {
 	return ErrRealUnavailable
 }
+func (r *RealClient) ContainerLogs(ctx context.Context, id string, tail int) (string, error) {
+	return "", ErrRealUnavailable
+}
+func (r *RealClient) ListImages(ctx context.Context) ([]Image, error) { return nil, ErrRealUnavailable }
+func (r *RealClient) PullImage(ctx context.Context, repository, tag string) error {
+	return ErrRealUnavailable
+}
+func (r *RealClient) DeleteImage(ctx context.Context, id string, force bool) error {
+	return ErrRealUnavailable
+}
+func (r *RealClient) ListVolumes(ctx context.Context) ([]Volume, error) {
+	return nil, ErrRealUnavailable
+}
+func (r *RealClient) CreateVolume(ctx context.Context, name, driver string) (*Volume, error) {
+	return nil, ErrRealUnavailable
+}
+func (r *RealClient) DeleteVolume(ctx context.Context, name string, force bool) error {
+	return ErrRealUnavailable
+}
+func (r *RealClient) ListNetworks(ctx context.Context) ([]Network, error) {
+	return nil, ErrRealUnavailable
+}
+func (r *RealClient) CreateNetwork(ctx context.Context, name, driver string) (*Network, error) {
+	return nil, ErrRealUnavailable
+}
+func (r *RealClient) DeleteNetwork(ctx context.Context, id string) error { return ErrRealUnavailable }

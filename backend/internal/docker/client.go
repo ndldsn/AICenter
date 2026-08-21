@@ -18,6 +18,22 @@ type Client interface {
 	StartContainer(ctx context.Context, id string) error
 	StopContainer(ctx context.Context, id string, timeoutSec int) error
 	DeleteContainer(ctx context.Context, id string, force bool) error
+	ContainerLogs(ctx context.Context, id string, tail int) (string, error)
+
+	// Images
+	ListImages(ctx context.Context) ([]Image, error)
+	PullImage(ctx context.Context, repository, tag string) error
+	DeleteImage(ctx context.Context, id string, force bool) error
+
+	// Volumes
+	ListVolumes(ctx context.Context) ([]Volume, error)
+	CreateVolume(ctx context.Context, name, driver string) (*Volume, error)
+	DeleteVolume(ctx context.Context, name string, force bool) error
+
+	// Networks
+	ListNetworks(ctx context.Context) ([]Network, error)
+	CreateNetwork(ctx context.Context, name, driver string) (*Network, error)
+	DeleteNetwork(ctx context.Context, id string) error
 }
 
 // ClientConfig selects and configures a Client implementation.
