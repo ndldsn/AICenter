@@ -22,5 +22,6 @@ pnpm-debug.log*
 *.sw?
 
 # Env
+.env
 .env.local
 .env.*.local
