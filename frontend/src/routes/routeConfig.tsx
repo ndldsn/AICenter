@@ -3,7 +3,7 @@ import { lazy } from 'react';
 const DashboardPage = lazy(() => import('@/features/dashboard/DashboardPage'));
 const ServerListPage = lazy(() => import('@/features/servers/ServerListPage'));
 const DockerDashboardPage = lazy(() => import('@/features/docker/DockerDashboardPage'));
-const ModelListPage = lazy(() => import('@/features/models/ModelListPage'));
+const ModelListPage = lazy(() => import('@/features/ai/ModelListPage'));
 const AgentListPage = lazy(() => import('@/features/agents/AgentListPage'));
 const TaskListPage = lazy(() => import('@/features/tasks/TaskListPage'));
 const MonitorDashboardPage = lazy(() => import('@/features/monitor/MonitorDashboardPage'));

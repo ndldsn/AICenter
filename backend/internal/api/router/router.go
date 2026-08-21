@@ -7,6 +7,7 @@ import (
 	"github.com/aicenter/aicenter/internal/api/middleware"
 	"github.com/aicenter/aicenter/internal/config"
 	"github.com/aicenter/aicenter/internal/pkg/logger"
+	"github.com/aicenter/aicenter/internal/repository"
 	"github.com/aicenter/aicenter/internal/service"
 	"github.com/aicenter/aicenter/internal/websocket"
 	"github.com/gin-gonic/gin"
@@ -69,11 +70,19 @@ func Setup(cfg *config.Config, db *sql.DB, hub *websocket.Hub, log *zap.Logger) 
 		dockerHandler := handler.NewDockerHandler(service.NewDockerService(hub))
 		dockerHandler.RegisterRoutes(protected, middleware.MockAuth())
 
-		// AI Providers & Models
-		protected.GET("/ai/providers", handleListProviders)
-		protected.POST("/ai/providers", handleCreateProvider)
-		protected.GET("/ai/models", handleListModels)
-		protected.POST("/ai/models", handleCreateModel)
+		// AI Providers & Models (Phase 4 - real handler)
+		aiService := service.NewAIService(
+			repository.NewAIProviderRepository(db),
+			repository.NewAIModelRepository(db),
+		)
+		aiHandler := handler.NewAIHandler(aiService)
+		protected.GET("/ai/providers", aiHandler.ListProviders)
+		protected.GET("/ai/providers/:id", aiHandler.GetProvider)
+		protected.POST("/ai/providers", aiHandler.CreateProvider)
+		protected.PUT("/ai/providers/:id", aiHandler.UpdateProvider)
+		protected.DELETE("/ai/providers/:id", aiHandler.DeleteProvider)
+		protected.GET("/ai/models/:provider_id", aiHandler.ListModels)
+		protected.POST("/ai/chat", aiHandler.Chat)
 
 		// Agents
 		protected.GET("/agents", handleListAgents)
