@@ -97,7 +97,6 @@ export function Sidebar() {
                 style={{ flex: 1, overflow: 'auto' }}
                 selectedKeys={selectedKeys}
                 onClickMenuItem={handleMenuClick}
-                collapsed={sidebarCollapsed}
                 autoOpen
             >
                 {routeMeta.map((item) => (
