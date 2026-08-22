@@ -66,6 +66,14 @@ func BadRequest(c *gin.Context, message string) {
 	})
 }
 
+// Conflict returns a 409 conflict error
+func Conflict(c *gin.Context, message string) {
+	c.JSON(http.StatusConflict, Response{
+		Code:    409,
+		Message: message,
+	})
+}
+
 // Unauthorized returns a 401 error
 func Unauthorized(c *gin.Context, message string) {
 	c.JSON(http.StatusUnauthorized, Response{

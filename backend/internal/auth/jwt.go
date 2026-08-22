@@ -63,3 +63,19 @@ func CheckPasswordHash(password, hash string) bool {
 	err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
 	return err == nil
 }
+
+// ValidateRefreshToken verifies the refresh token's signature and expiry,
+// returning the Subject claim (the user ID). Caller owns secret + expiry.
+func ValidateRefreshToken(tokenStr, secret string) (string, error) {
+	claims := &jwt.RegisteredClaims{}
+	token, err := jwt.ParseWithClaims(tokenStr, claims, func(token *jwt.Token) (interface{}, error) {
+		return []byte(secret), nil
+	})
+	if err != nil || !token.Valid {
+		return "", err
+	}
+	if claims.Subject == "" {
+		return "", fmt.Errorf("refresh token missing subject claim")
+	}
+	return claims.Subject, nil
+}

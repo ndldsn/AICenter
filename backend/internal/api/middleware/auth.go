@@ -61,16 +61,6 @@ func RequirePermission(permission string) gin.HandlerFunc {
 	}
 }
 
-// MockAuth is a development middleware that bypasses auth
-func MockAuth() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		c.Set("userID", "00000000-0000-0000-0000-000000000001")
-		c.Set("username", "admin")
-		c.Set("role", "superadmin")
-		c.Next()
-	}
-}
-
 func init() {
 	_ = time.Now
 }

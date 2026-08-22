@@ -51,34 +51,33 @@ func Setup(cfg *config.Config, db *sql.DB, hub *websocket.Hub, log *zap.Logger) 
 	// API v1
 	v1 := r.Group("/api/v1")
 
-	// Public routes
-	auth := v1.Group("/auth")
-	{
-		auth.POST("/login", func(c *gin.Context) {
-			c.JSON(200, gin.H{"message": "login endpoint - TODO"})
-		})
-		auth.POST("/register", func(c *gin.Context) {
-			c.JSON(200, gin.H{"message": "register endpoint - TODO"})
-		})
-		auth.POST("/refresh", func(c *gin.Context) {
-			c.JSON(200, gin.H{"message": "refresh endpoint - TODO"})
-		})
-	}
+	// Protected routes: real JWT bearer auth. MockAuth is intentionally removed
+	// so there is no "skip auth" back door; development logs in as admin.
+	prot := v1.Group("/", middleware.JWTAuth(cfg.Auth.Secret))
 
-	// Protected routes (with mock auth for development)
-	protected := v1.Group("/")
-	protected.Use(middleware.MockAuth())
+	// Public auth routes (login/register/refresh). /auth/me is wired below under
+	// protected routes so it can see the JWT-injected userID.
+	authHandler := handler.NewAuthHandler(
+		service.NewAuthService(
+			repository.NewUserRepository(db),
+			cfg,
+		),
+	)
+	authHandler.RegisterPublicRoutes(v1)
+
 	{
+		authHandler.RegisterProtectedRoutes(prot)
+
 		// Dashboard
-		protected.GET("/dashboard", handleDashboard)
+		prot.GET("/dashboard", handleDashboard)
 
 		// Servers - using real handler
 		serverHandler := handler.NewServerHandler()
-		serverHandler.RegisterRoutes(protected, middleware.MockAuth())
+		serverHandler.RegisterRoutes(prot, middleware.JWTAuth(cfg.Auth.Secret))
 
 		// Docker (Phase 3 - real handler)
 		dockerHandler := handler.NewDockerHandler(service.NewDockerService(hub))
-		dockerHandler.RegisterRoutes(protected, middleware.MockAuth())
+		dockerHandler.RegisterRoutes(prot, middleware.JWTAuth(cfg.Auth.Secret))
 
 		// AI Providers & Models (Phase 4 - real handler)
 		aiService := service.NewAIService(
@@ -86,13 +85,13 @@ func Setup(cfg *config.Config, db *sql.DB, hub *websocket.Hub, log *zap.Logger) 
 			repository.NewAIModelRepository(db),
 		)
 		aiHandler := handler.NewAIHandler(aiService)
-		protected.GET("/ai/providers", aiHandler.ListProviders)
-		protected.GET("/ai/providers/:id", aiHandler.GetProvider)
-		protected.POST("/ai/providers", aiHandler.CreateProvider)
-		protected.PUT("/ai/providers/:id", aiHandler.UpdateProvider)
-		protected.DELETE("/ai/providers/:id", aiHandler.DeleteProvider)
-		protected.GET("/ai/models/:provider_id", aiHandler.ListModels)
-		protected.POST("/ai/chat", aiHandler.Chat)
+		prot.GET("/ai/providers", aiHandler.ListProviders)
+		prot.GET("/ai/providers/:id", aiHandler.GetProvider)
+		prot.POST("/ai/providers", aiHandler.CreateProvider)
+		prot.PUT("/ai/providers/:id", aiHandler.UpdateProvider)
+		prot.DELETE("/ai/providers/:id", aiHandler.DeleteProvider)
+		prot.GET("/ai/models/:provider_id", aiHandler.ListModels)
+		prot.POST("/ai/chat", aiHandler.Chat)
 
 		// Agents
 		agentService := service.NewAgentService(
@@ -107,28 +106,28 @@ func Setup(cfg *config.Config, db *sql.DB, hub *websocket.Hub, log *zap.Logger) 
 			},
 		)
 		agentHandler := handler.NewAgentHandler(agentService)
-		protected.GET("/agents", agentHandler.ListAgents)
-		protected.POST("/agents", agentHandler.CreateAgent)
-		protected.GET("/agents/:id", agentHandler.GetAgent)
-		protected.PUT("/agents/:id", agentHandler.UpdateAgent)
-		protected.DELETE("/agents/:id", agentHandler.DeleteAgent)
-		protected.POST("/agents/:id/sessions", agentHandler.CreateSession)
-		protected.GET("/agents/sessions", agentHandler.ListSessions)
-		protected.GET("/agents/sessions/:id", agentHandler.GetSession)
-		protected.POST("/agents/sessions/:id/messages", agentHandler.SendMessage)
+		prot.GET("/agents", agentHandler.ListAgents)
+		prot.POST("/agents", agentHandler.CreateAgent)
+		prot.GET("/agents/:id", agentHandler.GetAgent)
+		prot.PUT("/agents/:id", agentHandler.UpdateAgent)
+		prot.DELETE("/agents/:id", agentHandler.DeleteAgent)
+		prot.POST("/agents/:id/sessions", agentHandler.CreateSession)
+		prot.GET("/agents/sessions", agentHandler.ListSessions)
+		prot.GET("/agents/sessions/:id", agentHandler.GetSession)
+		prot.POST("/agents/sessions/:id/messages", agentHandler.SendMessage)
 
-		protected.GET("/audit-logs", agentHandler.ListAudit)
+		prot.GET("/audit-logs", agentHandler.ListAudit)
 
 		// Approvals
-		protected.GET("/approvals", agentHandler.ListApprovals)
-		protected.GET("/approvals/:id", agentHandler.GetApproval)
-		protected.POST("/approvals/:id/approve", agentHandler.Approve)
-		protected.POST("/approvals/:id/reject", agentHandler.Reject)
+		prot.GET("/approvals", agentHandler.ListApprovals)
+		prot.GET("/approvals/:id", agentHandler.GetApproval)
+		prot.POST("/approvals/:id/approve", agentHandler.Approve)
+		prot.POST("/approvals/:id/reject", agentHandler.Reject)
 
 		// Tasks
-		protected.GET("/tasks", handleListTasks)
-		protected.POST("/tasks", handleCreateTask)
-		protected.GET("/tasks/:id", handleGetTask)
+		prot.GET("/tasks", handleListTasks)
+		prot.POST("/tasks", handleCreateTask)
+		prot.GET("/tasks/:id", handleGetTask)
 
 		// Monitor (Phase 6 - real handler)
 		monitorRepo := repository.NewMonitorRepository(db)
@@ -137,14 +136,14 @@ func Setup(cfg *config.Config, db *sql.DB, hub *websocket.Hub, log *zap.Logger) 
 		defer engine.Stop()
 		monitorService := service.NewMonitorService(monitorRepo, engine)
 		monitorHandler := handler.NewMonitorHandler(monitorService)
-		monitorHandler.RegisterRoutes(protected, middleware.MockAuth())
+		monitorHandler.RegisterRoutes(prot, middleware.JWTAuth(cfg.Auth.Secret))
 
 		// Notifications (Phase 7)
 		notifRepo := repository.NewNotificationRepository(db)
 		notifDispatcher := notifier.NewDispatcher(notifRepo, log)
 		notifService := service.NewNotificationService(notifRepo, notifDispatcher)
 		notifHandler := handler.NewNotificationHandler(notifService)
-		notifHandler.RegisterRoutes(protected, middleware.MockAuth())
+		notifHandler.RegisterRoutes(prot, middleware.JWTAuth(cfg.Auth.Secret))
 		// Wire the alert engine to the notification dispatcher so fired alerts
 		// trigger notifications (honouring each rule's bound channels).
 		engine.SetNotifier(func(eventType, title, severity, message string, data map[string]string, channelIDs []string) {
@@ -158,9 +157,9 @@ func Setup(cfg *config.Config, db *sql.DB, hub *websocket.Hub, log *zap.Logger) 
 		// Web Terminal (完善与优化 Phase 7.1)
 		terminalMgr := terminal.NewManager(log)
 		terminalHandler := handler.NewTerminalHandler(terminalMgr, log)
-		protected.POST("/terminal/sessions", terminalHandler.CreateSession)
-		protected.GET("/terminal/sessions", terminalHandler.ListSessions)
-		protected.POST("/terminal/sessions/:id/close", terminalHandler.CloseSession)
+		prot.POST("/terminal/sessions", terminalHandler.CreateSession)
+		prot.GET("/terminal/sessions", terminalHandler.ListSessions)
+		prot.POST("/terminal/sessions/:id/close", terminalHandler.CloseSession)
 		// WebSocket bridge for an active terminal session.
 		r.GET("/ws/terminal", func(c *gin.Context) {
 			terminalHandler.Bridge(c.Writer, c.Request)
@@ -168,15 +167,15 @@ func Setup(cfg *config.Config, db *sql.DB, hub *websocket.Hub, log *zap.Logger) 
 
 		// Batch operations (多服务器批量操作)
 		batchHandler := handler.NewBatchHandler(service.NewBatchService())
-		batchHandler.RegisterRoutes(protected, middleware.MockAuth())
+		batchHandler.RegisterRoutes(prot, middleware.JWTAuth(cfg.Auth.Secret))
 
 		// Users
-		protected.GET("/users", handleListUsers)
-		protected.GET("/roles", handleListRoles)
+		prot.GET("/users", handleListUsers)
+		prot.GET("/roles", handleListRoles)
 
 		// Settings
-		protected.GET("/settings", handleGetSettings)
-		protected.PUT("/settings", handleUpdateSettings)
+		prot.GET("/settings", handleGetSettings)
+		prot.PUT("/settings", handleUpdateSettings)
 	}
 
 	return r

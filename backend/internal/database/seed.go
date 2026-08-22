@@ -4,11 +4,15 @@ import (
 	"database/sql"
 	"time"
 
+	"github.com/aicenter/aicenter/internal/auth"
 	"github.com/aicenter/aicenter/internal/pkg/crypto"
 )
 
-// SeedData adds initial data for development
+// SeedData adds initial data for development.
 func SeedData(db *sql.DB) error {
+	if err := seedDefaultAdmin(db); err != nil {
+		return err
+	}
 	var count int
 	if err := db.QueryRow("SELECT COUNT(*) FROM servers").Scan(&count); err != nil {
 		return err
@@ -117,4 +121,29 @@ func SeedData(db *sql.DB) error {
 	}
 
 	return nil
+}
+
+// seedDefaultAdmin ensures a default admin user exists with a real bcrypt hash.
+// The migration may seed admin with a placeholder hash that CheckPasswordHash
+// rejects; we upsert here so admin / Admin@123! always works on first run.
+func seedDefaultAdmin(db *sql.DB) error {
+	var exists int
+	if err := db.QueryRow("SELECT COUNT(*) FROM users WHERE username = ?", "admin").Scan(&exists); err != nil {
+		return err
+	}
+	hash, err := auth.HashPassword("Admin@123!")
+	if err != nil {
+		return err
+	}
+	if exists > 0 {
+		_, err = db.Exec("UPDATE users SET password_hash = ?, is_active = 1, role = 'superadmin' WHERE username = ?",
+			hash, "admin")
+	} else {
+		now := time.Now().Format("2006-01-02 15:04:05")
+		_, err = db.Exec(`
+			INSERT INTO users (id, username, email, password_hash, role, is_active, created_at, updated_at)
+			VALUES (?, 'admin', 'admin@aicenter.local', ?, 'superadmin', 1, ?, ?)`,
+			"user-admin", hash, now, now)
+	}
+	return err
 }
