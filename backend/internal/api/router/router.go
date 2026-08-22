@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"strings"
+	"time"
 
 	"github.com/aicenter/aicenter/internal/agent/tools"
 	"github.com/aicenter/aicenter/internal/ai"
@@ -11,6 +12,7 @@ import (
 	"github.com/aicenter/aicenter/internal/api/middleware"
 	"github.com/aicenter/aicenter/internal/config"
 	"github.com/aicenter/aicenter/internal/models"
+	"github.com/aicenter/aicenter/internal/monitor"
 	"github.com/aicenter/aicenter/internal/pkg/crypto"
 	"github.com/aicenter/aicenter/internal/pkg/logger"
 	"github.com/aicenter/aicenter/internal/repository"
@@ -126,9 +128,14 @@ func Setup(cfg *config.Config, db *sql.DB, hub *websocket.Hub, log *zap.Logger) 
 		protected.POST("/tasks", handleCreateTask)
 		protected.GET("/tasks/:id", handleGetTask)
 
-		// Monitor
-		protected.GET("/monitor/metrics", handleMonitorMetrics)
-		protected.GET("/monitor/alerts", handleMonitorAlerts)
+		// Monitor (Phase 6 - real handler)
+		monitorRepo := repository.NewMonitorRepository(db)
+		engine := monitor.NewEngine(monitorRepo, monitor.SynthCollector{}, 15*time.Second)
+		engine.Start()
+		defer engine.Stop()
+		monitorService := service.NewMonitorService(monitorRepo, engine)
+		monitorHandler := handler.NewMonitorHandler(monitorService)
+		monitorHandler.RegisterRoutes(protected, middleware.MockAuth())
 
 		// Users
 		protected.GET("/users", handleListUsers)
@@ -214,13 +221,7 @@ func handleGetTask(c *gin.Context) {
 	c.JSON(200, gin.H{"message": "Get task - TODO"})
 }
 
-func handleMonitorMetrics(c *gin.Context) {
-	c.JSON(200, gin.H{"message": "Monitor metrics - TODO"})
-}
 
-func handleMonitorAlerts(c *gin.Context) {
-	c.JSON(200, gin.H{"items": []interface{}{}, "total": 0})
-}
 
 func handleListAuditLogs(c *gin.Context) {
 	c.JSON(200, gin.H{"items": []interface{}{}, "total": 0})
