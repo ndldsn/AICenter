@@ -7,18 +7,48 @@ import (
 	"time"
 
 	"github.com/aicenter/aicenter/internal/models"
+	"github.com/aicenter/aicenter/internal/pkg/cache"
 	"github.com/aicenter/aicenter/internal/pkg/ssh"
 	"github.com/aicenter/aicenter/internal/repository"
 )
 
 // ServerService handles server business logic
 type ServerService struct {
-	repo *repository.ServerRepository
+	repo  *repository.ServerRepository
+	cache cache.Store
 }
 
 // NewServerService creates a new server service
 func NewServerService() *ServerService {
 	return &ServerService{repo: repository.NewServerRepository()}
+}
+
+// NewServerServiceWithCache creates a new server service with a cache store
+// for hot read paths (server list, get-by-id, groups).
+func NewServerServiceWithCache(c cache.Store) *ServerService {
+	s := NewServerService()
+	if c == nil {
+		c = cache.NewMemory(512)
+	}
+	s.cache = c
+	return s
+}
+
+// invalidateServerCache clears the cached server entries on a write.
+func (s *ServerService) invalidateServerCache() {
+	if s.cache == nil {
+		return
+	}
+	s.cache.Delete(cache.ServerListKey())
+	s.cache.Clear()
+}
+
+// invalidateServer clears just one server's cache entry (used by Update/Delete).
+func (s *ServerService) invalidateServer(id string) {
+	if s.cache != nil {
+		s.cache.Delete(cache.ServerKey(id))
+		s.cache.Delete(cache.ServerListKey())
+	}
 }
 
 // CreateServer creates a new server
@@ -40,17 +70,46 @@ func (s *ServerService) CreateServer(req *CreateServerRequest) (*models.Server, 
 	if err := s.repo.Create(server); err != nil {
 		return nil, fmt.Errorf("create server: %w", err)
 	}
+	s.invalidateServerCache()
 	return server, nil
 }
 
 // GetServer retrieves a server by ID
 func (s *ServerService) GetServer(id string) (*models.Server, error) {
-	return s.repo.GetByID(id)
+	if s.cache != nil {
+		key := cache.ServerKey(id)
+		if v, ok := s.cache.Get(key); ok {
+			return v.(*models.Server), nil
+		}
+	}
+	sv, err := s.repo.GetByID(id)
+	if err != nil {
+		return nil, err
+	}
+	if s.cache != nil {
+		s.cache.Set(cache.ServerKey(id), sv, cache.DefaultTTL)
+	}
+	return sv, nil
 }
 
 // ListServers retrieves all servers
 func (s *ServerService) ListServers(page, limit int) ([]*models.Server, int64, error) {
 	offset := (page - 1) * limit
+	// Only cache the unpaginated full-list reads (dashboard/server list use
+	// large page sizes); cache the result by (page,limit) key.
+	if s.cache != nil && page <= 1 && limit >= 100 {
+		key := "servers:list:all"
+		if v, ok := s.cache.Get(key); ok {
+			all := v.([]*models.Server)
+			return all, int64(len(all)), nil
+		}
+		all, _, err := s.repo.List(0, 10000)
+		if err != nil {
+			return nil, 0, err
+		}
+		s.cache.Set(key, all, cache.DefaultTTL)
+		return all, int64(len(all)), nil
+	}
 	return s.repo.List(offset, limit)
 }
 
@@ -85,12 +144,20 @@ func (s *ServerService) UpdateServer(id string, req *UpdateServerRequest) error 
 		tagsJSON, _ := json.Marshal(req.Tags)
 		updates["tags"] = tagsJSON
 	}
-	return s.repo.Update(id, updates)
+	if err := s.repo.Update(id, updates); err != nil {
+		return err
+	}
+	s.invalidateServer(id)
+	return nil
 }
 
 // DeleteServer deletes a server
 func (s *ServerService) DeleteServer(id string) error {
-	return s.repo.Delete(id)
+	if err := s.repo.Delete(id); err != nil {
+		return err
+	}
+	s.invalidateServer(id)
+	return nil
 }
 
 // TestConnection tests SSH connection to a server

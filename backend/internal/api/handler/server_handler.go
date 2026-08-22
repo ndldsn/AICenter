@@ -14,7 +14,7 @@ type ServerHandler struct {
 
 // NewServerHandler creates a new server handler
 func NewServerHandler() *ServerHandler {
-	return &ServerHandler{svc: service.NewServerService()}
+	return &ServerHandler{svc: service.NewServerServiceWithCache(nil)}
 }
 
 // RegisterRoutes registers server routes
