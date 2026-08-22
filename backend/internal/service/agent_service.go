@@ -7,9 +7,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/aicenter/aicenter/internal/agent/approval"
-	"github.com/aicenter/aicenter/internal/agent/runtime"
-	"github.com/aicenter/aicenter/internal/agent/tools"
+	"github.com/aicenter/aicenter/internal/runtime/approval"
+	"github.com/aicenter/aicenter/internal/runtime/engine"
+	"github.com/aicenter/aicenter/internal/runtime/tools"
 	"github.com/aicenter/aicenter/internal/models"
 	"github.com/aicenter/aicenter/internal/repository"
 )
@@ -108,7 +108,7 @@ func (s *AgentService) SendToSession(sessionID string, userMessage string, userI
 		SessionID: sessionID, Role: "user", Content: userMessage,
 	})
 
-	exec := runtime.New(s.toolReg, agent)
+	exec := engine.New(s.toolReg, agent)
 	result := SessionResult{SessionID: sessionID, AgentID: agent.ID, UserID: userID}
 
 	plannerFn := func(prompt string) (string, error) {

@@ -130,11 +130,13 @@ func NewAuditRepository(db *sql.DB) *AuditRepository {
 func (r *AuditRepository) Record(entry *AuditEntry) error {
 	id := uuid.New().String()
 	_, err := r.db.Exec(`
-		INSERT INTO audit_logs (id, username, action, resource_type, resource_id, resource_name, method, path, status_code, agent_session_id, approval_id, created_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
-		id, entry.Username, entry.Action, entry.ResourceType,
+		INSERT INTO audit_logs (id, user_id, username, action, resource_type, resource_id, resource_name, method, path, status_code, ip_address, user_agent, request_body, response_body, before_state, after_state, duration_ms, error_message, server_id, agent_session_id, approval_id, created_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
+		id, entry.UserID, entry.Username, entry.Action, entry.ResourceType,
 		entry.ResourceID, entry.ResourceName, entry.Method, entry.Path,
-		entry.StatusCode, entry.AgentSessionID, entry.ApprovalID)
+		entry.StatusCode, entry.IP, entry.UserAgent, entry.RequestBody, entry.ResponseBody,
+		entry.BeforeState, entry.AfterState, entry.DurationMs, entry.Error,
+		"", entry.AgentSessionID, entry.ApprovalID)
 	return err
 }
 
@@ -170,6 +172,8 @@ func (r *AuditRepository) List(limit, offset int) ([]AuditEntry, error) {
 
 type AuditEntry struct {
 	Username       string `json:"username"`
+	UserID         string `json:"user_id,omitempty"`
+	Role           string `json:"role,omitempty"`
 	Action         string `json:"action"`
 	ResourceType   string `json:"resource_type"`
 	ResourceID     string `json:"resource_id"`
@@ -177,6 +181,14 @@ type AuditEntry struct {
 	Method         string `json:"method,omitempty"`
 	Path           string `json:"path,omitempty"`
 	StatusCode     int    `json:"status_code,omitempty"`
+	IP             string `json:"ip_address,omitempty"`
+	UserAgent      string `json:"user_agent,omitempty"`
+	RequestBody    string `json:"request_body,omitempty"`
+	ResponseBody   string `json:"response_body,omitempty"`
+	BeforeState    string `json:"before_state,omitempty"`
+	AfterState     string `json:"after_state,omitempty"`
+	DurationMs     int    `json:"duration_ms,omitempty"`
+	Error          string `json:"error_message,omitempty"`
 	AgentSessionID string `json:"agent_session_id,omitempty"`
 	ApprovalID     string `json:"approval_id,omitempty"`
 	CreatedAt      string `json:"created_at"`

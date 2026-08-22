@@ -108,14 +108,15 @@ func (r *UserRepository) List(q string, page, pageSize int) ([]*models.User, int
 	var out []*models.User
 	for rows.Next() {
 		var u models.User
-		var lastLogin, createdAt, updatedAt string
+		var lastLogin sql.NullString
+		var createdAt, updatedAt string
 		if err := rows.Scan(&u.ID, &u.Username, &u.Email, &u.PasswordHash, &u.Role, &u.IsActive, &lastLogin, &createdAt, &updatedAt); err != nil {
 			return nil, 0, err
 		}
 		u.CreatedAt, _ = utils.ParseTimestamp(createdAt)
 		u.UpdatedAt, _ = utils.ParseTimestamp(updatedAt)
-		if lastLogin != "" {
-			t, err := utils.ParseTimestamp(lastLogin)
+		if lastLogin.Valid {
+			t, err := utils.ParseTimestamp(lastLogin.String)
 			if err == nil && !t.IsZero() {
 				u.LastLoginAt = &t
 			}

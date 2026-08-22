@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aicenter/aicenter/internal/agent/tools"
+	"github.com/aicenter/aicenter/internal/runtime/tools"
 	"github.com/aicenter/aicenter/internal/ai"
 	"github.com/aicenter/aicenter/internal/api/handler"
 	"github.com/aicenter/aicenter/internal/api/middleware"
@@ -38,7 +38,14 @@ func Setup(cfg *config.Config, db *sql.DB, hub *websocket.Hub, log *zap.Logger) 
 	r.Use(middleware.CORS())
 	r.Use(middleware.RequestID())
 
-	// Health check (no auth)
+	// API v1
+	v1 := r.Group("/api/v1")
+	// AuditMiddleware is inserted at the v1 group level so it covers
+	// both public (login/register) and protected routes. It is
+	// intentionally best-effort and never rejects a request.
+	v1.Use(middleware.AuditMiddleware(db))
+
+	// Health check (no auth, no audit)
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(200, gin.H{"status": "ok", "service": "aicenter"})
 	})
@@ -48,11 +55,7 @@ func Setup(cfg *config.Config, db *sql.DB, hub *websocket.Hub, log *zap.Logger) 
 		websocket.ServeWs(hub, c.Writer, c.Request)
 	})
 
-	// API v1
-	v1 := r.Group("/api/v1")
-
-	// Protected routes: real JWT bearer auth. MockAuth is intentionally removed
-	// so there is no "skip auth" back door; development logs in as admin.
+	// Protected routes: real JWT bearer auth.
 	prot := v1.Group("/", middleware.JWTAuth(cfg.Auth.Secret))
 
 	// Public auth routes (login/register/refresh). /auth/me is wired below under
