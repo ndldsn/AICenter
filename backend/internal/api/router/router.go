@@ -169,9 +169,9 @@ func Setup(cfg *config.Config, db *sql.DB, hub *websocket.Hub, log *zap.Logger) 
 		batchHandler := handler.NewBatchHandler(service.NewBatchService())
 		batchHandler.RegisterRoutes(prot, middleware.JWTAuth(cfg.Auth.Secret))
 
-		// Users (H2 batch 2 follow-up: real user CRUD; /users stays as a
-		// thin placeholder for now, behind roles.manage so it's gated).
-		prot.GET("/users", middleware.RequirePermission("roles.manage"), handleListUsers)
+		// Users (H2 batch 2b: real user CRUD gated on users.manage)
+		usersHandler := handler.NewUsersHandler(service.NewUserService(repository.NewUserRepository(db)))
+		usersHandler.RegisterRoutes(prot)
 
 		// Roles - real RBAC management endpoints (H2 batch 2).
 		rolesHandler := handler.NewRolesHandler(repository.NewRoleRepository(db))
@@ -352,14 +352,6 @@ func handleApproveRequest(c *gin.Context) {
 
 func handleRejectRequest(c *gin.Context) {
 	c.JSON(200, gin.H{"message": "Reject request - TODO"})
-}
-
-func handleListUsers(c *gin.Context) {
-	c.JSON(200, gin.H{"items": []interface{}{}, "total": 0})
-}
-
-func handleListRoles(c *gin.Context) {
-	c.JSON(200, gin.H{"items": []interface{}{}, "total": 0})
 }
 
 func handleGetSettings(c *gin.Context) {

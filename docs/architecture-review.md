@@ -103,7 +103,8 @@
 | 4 | seed 默认 admin 假 hash bug 修复（改为动态 bcrypt，admin/Admin@123!） | ✅ 同上 |
 | 5 | H1 PostgreSQL 兼容（pgx 接入 + SQL 方言收敛 + 双库兼容迁移） | ✅ commit `7bbccd1` |
 | 6 | H2 批2 交付（RBAC 注册中心 + 权限/角色表 + 权限门控中间件 + /roles /permissions /roles/groups 端点 + 16 个单测；/users CRUD 未含） | ✅ commit `4b262ed` |
-| 7 | 后续：H2 批2b（真实 /users CRUD + 角色分配 UI）/ H3 文档对齐（Agent 改"两层架构"） | ⏳ 待用户决策 |
+| 7 | H2 批2b 交付（真实 /users CRUD + 角色分配，含 role 存在性校验，支持自定义角色；6 端点 users.manage 门控） | ✅ commit `987…` |
+| 8 | 后续：H3 文档对齐（Agent 改"两层架构"：架构总览 §1 / 组件 §5 / 部署/通信 §14 / 架构决策 ADR） | ⏳ 待执行 |
 
 > 注：本环境无 Docker，无法实机启动 PostgreSQL 做端到端验证。H1 已完成代码层面的双库兼容
 > （SQLite 独占语法全部清除、`datetime('now')`→`CURRENT_TIMESTAMP`、`INSERT OR IGNORE`→`ON CONFLICT`、
