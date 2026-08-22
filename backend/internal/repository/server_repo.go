@@ -7,6 +7,7 @@ import (
 
 	"github.com/aicenter/aicenter/internal/database"
 	"github.com/aicenter/aicenter/internal/models"
+	"github.com/aicenter/aicenter/internal/pkg/utils"
 	"github.com/google/uuid"
 )
 
@@ -211,19 +212,19 @@ func (r *ServerRepository) scanServer(row interface {
 		json.Unmarshal([]byte(hwInfo.String), s.HardwareInfo)
 	}
 	if lastHB.Valid && lastHB.String != "" {
-		t, err := time.Parse("2006-01-02 15:04:05", lastHB.String)
-		if err == nil {
+		t, err := utils.ParseTimestamp(lastHB.String)
+		if err == nil && !t.IsZero() {
 			s.LastHeartbeat = &t
 		}
 	}
 	if createdAt.Valid && createdAt.String != "" {
-		t, err := time.Parse("2006-01-02 15:04:05", createdAt.String)
+		t, err := utils.ParseTimestamp(createdAt.String)
 		if err == nil {
 			s.CreatedAt = t
 		}
 	}
 	if updatedAt.Valid && updatedAt.String != "" {
-		t, err := time.Parse("2006-01-02 15:04:05", updatedAt.String)
+		t, err := utils.ParseTimestamp(updatedAt.String)
 		if err == nil {
 			s.UpdatedAt = t
 		}

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/aicenter/aicenter/internal/models"
+	"github.com/aicenter/aicenter/internal/pkg/utils"
 	"github.com/google/uuid"
 )
 
@@ -92,11 +93,11 @@ func (r *UserRepository) scanUser(row interface{ Scan(dest ...interface{}) error
 	if err != nil {
 		return nil, err
 	}
-	u.CreatedAt, _ = time.Parse("2006-01-02 15:04:05", createdAt)
-	u.UpdatedAt, _ = time.Parse("2006-01-02 15:04:05", updatedAt)
+	u.CreatedAt, _ = utils.ParseTimestamp(createdAt)
+	u.UpdatedAt, _ = utils.ParseTimestamp(updatedAt)
 	if lastLogin.Valid {
-		t, err := time.Parse("2006-01-02 15:04:05", lastLogin.String)
-		if err == nil {
+		t, err := utils.ParseTimestamp(lastLogin.String)
+		if err == nil && !t.IsZero() {
 			u.LastLoginAt = &t
 		}
 	}
