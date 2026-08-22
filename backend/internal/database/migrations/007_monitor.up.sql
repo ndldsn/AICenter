@@ -23,8 +23,8 @@ CREATE TABLE IF NOT EXISTS alert_rules (
     server_id      TEXT,                -- NULL = global (all servers)
     is_enabled     INTEGER DEFAULT 1,
     cooldown       INTEGER DEFAULT 300, -- seconds between repeat alerts
-    created_at     TEXT DEFAULT (datetime('now')),
-    updated_at     TEXT DEFAULT (datetime('now'))
+    created_at     TEXT DEFAULT (CURRENT_TIMESTAMP),
+    updated_at     TEXT DEFAULT (CURRENT_TIMESTAMP)
 );
 
 CREATE TABLE IF NOT EXISTS alert_events (
@@ -39,7 +39,7 @@ CREATE TABLE IF NOT EXISTS alert_events (
     severity     TEXT DEFAULT 'warning',
     message      TEXT,
     status       TEXT DEFAULT 'firing',   -- firing / acknowledged / resolved
-    triggered_at TEXT DEFAULT (datetime('now')),
+    triggered_at TEXT DEFAULT (CURRENT_TIMESTAMP),
     acknowledged_by TEXT,
     acknowledged_at TEXT
 );

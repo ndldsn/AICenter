@@ -194,7 +194,7 @@ func (r *MonitorRepository) CreateRule(rule *models.AlertRule) error {
 	}
 	_, err := r.db.Exec(`
 		INSERT INTO alert_rules (id, name, metric_name, condition, threshold, duration, severity, server_id, is_enabled, cooldown, notification_channels, created_at, updated_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))`,
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
 		rule.ID, rule.Name, rule.MetricName, rule.Condition, rule.Threshold,
 		rule.Duration, rule.Severity, nullIfEmpty(deref(rule.ServerID)), boolInt(rule.IsEnabled), rule.Cooldown, rule.NotificationChannels)
 	return err
@@ -206,7 +206,7 @@ func (r *MonitorRepository) UpdateRule(id string, upd *models.AlertRule) (*model
 	}
 	res, err := r.db.Exec(`
 		UPDATE alert_rules SET name=?, metric_name=?, condition=?, threshold=?, duration=?,
-		       severity=?, server_id=?, is_enabled=?, cooldown=?, notification_channels=?, updated_at=datetime('now')
+		       severity=?, server_id=?, is_enabled=?, cooldown=?, notification_channels=?, updated_at=CURRENT_TIMESTAMP
 		WHERE id=?`,
 		upd.Name, upd.MetricName, upd.Condition, upd.Threshold, upd.Duration,
 		upd.Severity, nullIfEmpty(deref(upd.ServerID)), boolInt(upd.IsEnabled), upd.Cooldown, upd.NotificationChannels, id)
@@ -301,7 +301,7 @@ func (r *MonitorRepository) CreateEvent(e *models.AlertEvent) error {
 	e.TriggeredAt = time.Now().UTC()
 	_, err := r.db.Exec(`
 		INSERT INTO alert_events (id, rule_id, rule_name, server_id, metric_name, value, threshold, condition, severity, message, status, triggered_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`,
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
 		e.ID, nullIfEmpty(e.RuleID), e.RuleName, nullIfEmpty(e.ServerID),
 		e.MetricName, e.Value, e.Threshold, e.Condition, e.Severity, e.Message, e.Status)
 	return err
@@ -352,7 +352,7 @@ func (r *MonitorRepository) ListEvents(status string, limit int) ([]models.Alert
 }
 
 func (r *MonitorRepository) AckEvent(id, by string) error {
-	res, err := r.db.Exec(`UPDATE alert_events SET status='acknowledged', acknowledged_by=?, acknowledged_at=datetime('now')
+	res, err := r.db.Exec(`UPDATE alert_events SET status='acknowledged', acknowledged_by=?, acknowledged_at=CURRENT_TIMESTAMP
 		WHERE id=? AND status='firing'`, by, id)
 	if err != nil {
 		return err

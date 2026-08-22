@@ -7,8 +7,8 @@ CREATE TABLE IF NOT EXISTS users (
     role            TEXT DEFAULT 'viewer',
     is_active       INTEGER DEFAULT 1,
     last_login_at   TEXT,
-    created_at      TEXT DEFAULT (datetime('now')),
-    updated_at      TEXT DEFAULT (datetime('now'))
+    created_at      TEXT DEFAULT (CURRENT_TIMESTAMP),
+    updated_at      TEXT DEFAULT (CURRENT_TIMESTAMP)
 );
 
 CREATE TABLE IF NOT EXISTS roles (
@@ -16,7 +16,7 @@ CREATE TABLE IF NOT EXISTS roles (
     name            TEXT UNIQUE NOT NULL,
     description     TEXT,
     is_system       INTEGER DEFAULT 0,
-    created_at      TEXT DEFAULT (datetime('now'))
+    created_at      TEXT DEFAULT (CURRENT_TIMESTAMP)
 );
 
 -- Insert default roles

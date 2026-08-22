@@ -97,6 +97,14 @@
 
 | # | 动作 | 状态 |
 |---|------|------|
-| 1 | 评审报告落盘 `docs/architecture-review.md` | ✅ 本文件 |
-| 2 | H4 硬编码 JWT secret 修复 | ✅ `backend/internal/config/config.go` + `config_test.go` |
-| 3 | 后续：评审议程 1–5 拍板后统一修正 ARCHITECTURE.md | ⏳ 待用户决策 |
+| 1 | 评审报告落盘 `docs/architecture-review.md` | ✅ |
+| 2 | H4 硬编码 JWT secret 修复 | ✅ commit `4e2f81a` |
+| 3 | H2 批1 交付（真实 JWT 认证 + bcrypt + login/register/refresh + 移除 MockAuth） | ✅ commit `f4bebd3` |
+| 4 | seed 默认 admin 假 hash bug 修复（改为动态 bcrypt，admin/Admin@123!） | ✅ 同上 |
+| 5 | H1 PostgreSQL 兼容（pgx 接入 + SQL 方言收敛 + 双库兼容迁移） | ✅ commit `987…` |
+| 6 | 后续：H2 批2（RBAC 权限中间件 + /users /roles CRUD）/ H3 文档对齐 | ⏳ 待用户决策 |
+
+> 注：本环境无 Docker，无法实机启动 PostgreSQL 做端到端验证。H1 已完成代码层面的双库兼容
+> （SQLite 独占语法全部清除、`datetime('now')`→`CURRENT_TIMESTAMP`、`INSERT OR IGNORE`→`ON CONFLICT`、
+> migrate.go 命名参数、时间解析 helper），并以 SQLite 路径做完整 E2E 回归验证；
+> 真实 PG 验证需在装有 docker 的开发机/CI 跑一次 `DATABASE_URL=postgresql://...` 启动即可确认。

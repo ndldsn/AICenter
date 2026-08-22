@@ -86,10 +86,11 @@ func Migrate(db *sql.DB, log *zap.Logger) error {
 			return fmt.Errorf("failed to apply migration %s: %w", file, err)
 		}
 
-		if _, err := tx.Exec("INSERT INTO schema_migrations (version) VALUES (?)", version); err != nil {
-			tx.Rollback()
-			return fmt.Errorf("failed to record migration %s: %w", file, err)
-		}
+		if _, err := tx.Exec("INSERT INTO schema_migrations (version) VALUES (@version)",
+			sql.Named("version", version)); err != nil {
+		tx.Rollback()
+		return fmt.Errorf("failed to record migration %s: %w", file, err)
+	}
 
 		if err := tx.Commit(); err != nil {
 			return fmt.Errorf("failed to commit migration %s: %w", file, err)

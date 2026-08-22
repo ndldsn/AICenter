@@ -91,8 +91,9 @@ func SeedData(db *sql.DB) error {
 	// Phase 7: default notification channel + templates so the pipeline works
 	// out of the box (console channel is safe in dev; webhook can be added).
 	_, err = db.Exec(`
-		INSERT OR IGNORE INTO notification_channels (id, name, type, config, is_enabled, created_at, updated_at)
-		VALUES ('ch-console', 'Console (dev)', 'console', '{}', 1, datetime('now'), datetime('now'))
+		INSERT INTO notification_channels (id, name, type, config, is_enabled, created_at, updated_at)
+		VALUES ('ch-console', 'Console (dev)', 'console', '{}', 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+		ON CONFLICT (id) DO NOTHING
 	`)
 	if err != nil {
 		return err
@@ -112,8 +113,9 @@ func SeedData(db *sql.DB) error {
 	}
 	for _, t := range templates {
 		_, err = db.Exec(`
-			INSERT OR IGNORE INTO notification_templates (id, name, event_type, subject, body, channels, is_enabled, created_at, updated_at)
-			VALUES (?, ?, ?, ?, ?, ?, 1, datetime('now'), datetime('now'))
+			INSERT INTO notification_templates (id, name, event_type, subject, body, channels, is_enabled, created_at, updated_at)
+			VALUES (?, ?, ?, ?, ?, ?, 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+			ON CONFLICT (id) DO NOTHING
 		`, t.id, t.name, t.eventType, t.subject, t.body, t.channels)
 		if err != nil {
 			return err

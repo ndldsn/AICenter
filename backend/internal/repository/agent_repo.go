@@ -253,7 +253,7 @@ func (r *AgentMessageRepository) Append(m *models.AgentMessage) error {
 	}
 	_, err := r.db.Exec(`
 		INSERT INTO agent_messages (id, session_id, role, content, tool_call_id, tool_name, tool_args, tool_result, metadata, created_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`,
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
 		m.ID, m.SessionID, m.Role, m.Content,
 		m.ToolCallID, m.ToolName, toolArgs, toolResult, meta)
 	return err

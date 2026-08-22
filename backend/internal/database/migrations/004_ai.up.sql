@@ -9,8 +9,8 @@ CREATE TABLE IF NOT EXISTS ai_providers (
     is_enabled      INTEGER DEFAULT 1,
     is_default      INTEGER DEFAULT 0,
     config          TEXT,
-    created_at      TEXT DEFAULT (datetime('now')),
-    updated_at      TEXT DEFAULT (datetime('now'))
+    created_at      TEXT DEFAULT (CURRENT_TIMESTAMP),
+    updated_at      TEXT DEFAULT (CURRENT_TIMESTAMP)
 );
 
 CREATE TABLE IF NOT EXISTS ai_models (
@@ -25,6 +25,6 @@ CREATE TABLE IF NOT EXISTS ai_models (
     is_enabled      INTEGER DEFAULT 1,
     is_default      INTEGER DEFAULT 0,
     config          TEXT,
-    created_at      TEXT DEFAULT (datetime('now')),
-    updated_at      TEXT DEFAULT (datetime('now'))
+    created_at      TEXT DEFAULT (CURRENT_TIMESTAMP),
+    updated_at      TEXT DEFAULT (CURRENT_TIMESTAMP)
 );

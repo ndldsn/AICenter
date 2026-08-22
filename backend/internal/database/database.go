@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	_ "github.com/glebarez/go-sqlite"
+	_ "github.com/jackc/pgx/v5/stdlib"
 	"go.uber.org/zap"
 )
 

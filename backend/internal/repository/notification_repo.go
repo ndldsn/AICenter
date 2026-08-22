@@ -56,13 +56,13 @@ func (r *NotificationRepository) CreateChannel(ch *models.NotificationChannel) e
 	now := time.Now().UTC()
 	ch.CreatedAt, ch.UpdatedAt = now, now
 	_, err := r.db.Exec(`INSERT INTO notification_channels (id, name, type, config, is_enabled, created_at, updated_at)
-		VALUES (?, ?, ?, ?, ?, datetime('now'), datetime('now'))`,
+		VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
 		ch.ID, ch.Name, ch.Type, ch.Config, boolInt(ch.IsEnabled))
 	return err
 }
 
 func (r *NotificationRepository) UpdateChannel(id string, upd *models.NotificationChannel) (*models.NotificationChannel, error) {
-	res, err := r.db.Exec(`UPDATE notification_channels SET name=?, type=?, config=?, is_enabled=?, updated_at=datetime('now') WHERE id=?`,
+	res, err := r.db.Exec(`UPDATE notification_channels SET name=?, type=?, config=?, is_enabled=?, updated_at=CURRENT_TIMESTAMP WHERE id=?`,
 		upd.Name, upd.Type, upd.Config, boolInt(upd.IsEnabled), id)
 	if err != nil {
 		return nil, err
@@ -141,13 +141,13 @@ func (r *NotificationRepository) CreateTemplate(t *models.NotificationTemplate) 
 	now := time.Now().UTC()
 	t.CreatedAt, t.UpdatedAt = now, now
 	_, err := r.db.Exec(`INSERT INTO notification_templates (id, name, event_type, subject, body, channels, is_enabled, created_at, updated_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))`,
+		VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
 		t.ID, t.Name, t.EventType, t.Subject, t.Body, t.Channels, boolInt(t.IsEnabled))
 	return err
 }
 
 func (r *NotificationRepository) UpdateTemplate(id string, upd *models.NotificationTemplate) (*models.NotificationTemplate, error) {
-	res, err := r.db.Exec(`UPDATE notification_templates SET name=?, event_type=?, subject=?, body=?, channels=?, is_enabled=?, updated_at=datetime('now') WHERE id=?`,
+	res, err := r.db.Exec(`UPDATE notification_templates SET name=?, event_type=?, subject=?, body=?, channels=?, is_enabled=?, updated_at=CURRENT_TIMESTAMP WHERE id=?`,
 		upd.Name, upd.EventType, upd.Subject, upd.Body, upd.Channels, boolInt(upd.IsEnabled), id)
 	if err != nil {
 		return nil, err
@@ -200,7 +200,7 @@ func (r *NotificationRepository) CreateDeliveryLog(l *models.NotificationDeliver
 		l.CreatedAt = time.Now().UTC()
 	}
 	_, err := r.db.Exec(`INSERT INTO notification_delivery_logs (id, channel_id, channel_type, template_id, event_type, subject, body, status, error_message, created_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`,
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
 		l.ID, nullIfEmpty(l.ChannelID), l.ChannelType, nullIfEmpty(l.TemplateID),
 		l.EventType, l.Subject, l.Body, l.Status, nullIfEmpty(l.ErrorMessage))
 	return err

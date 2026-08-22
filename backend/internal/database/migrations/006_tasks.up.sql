@@ -13,8 +13,8 @@ CREATE TABLE IF NOT EXISTS tasks (
     started_at      TEXT,
     completed_at    TEXT,
     error_message   TEXT,
-    created_at      TEXT DEFAULT (datetime('now')),
-    updated_at      TEXT DEFAULT (datetime('now'))
+    created_at      TEXT DEFAULT (CURRENT_TIMESTAMP),
+    updated_at      TEXT DEFAULT (CURRENT_TIMESTAMP)
 );
 
 CREATE TABLE IF NOT EXISTS task_steps (
@@ -29,7 +29,7 @@ CREATE TABLE IF NOT EXISTS task_steps (
     approved_by     TEXT REFERENCES users(id),
     result          TEXT,
     error_message   TEXT,
-    created_at      TEXT DEFAULT (datetime('now'))
+    created_at      TEXT DEFAULT (CURRENT_TIMESTAMP)
 );
 
 CREATE TABLE IF NOT EXISTS approval_requests (
@@ -37,15 +37,15 @@ CREATE TABLE IF NOT EXISTS approval_requests (
     request_type    TEXT,
     status          TEXT DEFAULT 'pending',
     requested_by    TEXT REFERENCES users(id),
-    requested_at    TEXT DEFAULT (datetime('now')),
+    requested_at    TEXT DEFAULT (CURRENT_TIMESTAMP),
     approved_by     TEXT REFERENCES users(id),
     approved_at     TEXT,
     tool_name       TEXT,
     tool_args       TEXT,
     risk_level      TEXT,
     dry_run_result  TEXT,
-    expires_at      TEXT DEFAULT (datetime('now', '+24 hours')),
-    created_at      TEXT DEFAULT (datetime('now'))
+    expires_at      TEXT,
+    created_at      TEXT DEFAULT (CURRENT_TIMESTAMP)
 );
 
 CREATE TABLE IF NOT EXISTS audit_logs (
@@ -70,7 +70,7 @@ CREATE TABLE IF NOT EXISTS audit_logs (
     server_id       TEXT,
     agent_session_id TEXT,
     approval_id     TEXT REFERENCES approval_requests(id),
-    created_at      TEXT DEFAULT (datetime('now'))
+    created_at      TEXT DEFAULT (CURRENT_TIMESTAMP)
 );
 
 CREATE INDEX IF NOT EXISTS idx_audit_user ON audit_logs(user_id);

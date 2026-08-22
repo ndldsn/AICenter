@@ -13,8 +13,8 @@ CREATE TABLE IF NOT EXISTS agents (
     require_approval_for TEXT DEFAULT '[]',
     is_enabled      INTEGER DEFAULT 1,
     created_by      TEXT REFERENCES users(id),
-    created_at      TEXT DEFAULT (datetime('now')),
-    updated_at      TEXT DEFAULT (datetime('now'))
+    created_at      TEXT DEFAULT (CURRENT_TIMESTAMP),
+    updated_at      TEXT DEFAULT (CURRENT_TIMESTAMP)
 );
 
 CREATE TABLE IF NOT EXISTS agent_sessions (
@@ -27,9 +27,9 @@ CREATE TABLE IF NOT EXISTS agent_sessions (
     context_summary TEXT,
     token_input     INTEGER DEFAULT 0,
     token_output    INTEGER DEFAULT 0,
-    started_at      TEXT DEFAULT (datetime('now')),
+    started_at      TEXT DEFAULT (CURRENT_TIMESTAMP),
     ended_at        TEXT,
-    created_at      TEXT DEFAULT (datetime('now'))
+    created_at      TEXT DEFAULT (CURRENT_TIMESTAMP)
 );
 
 CREATE TABLE IF NOT EXISTS agent_messages (
@@ -42,7 +42,7 @@ CREATE TABLE IF NOT EXISTS agent_messages (
     tool_args       TEXT,
     tool_result     TEXT,
     metadata        TEXT,
-    created_at      TEXT DEFAULT (datetime('now'))
+    created_at      TEXT DEFAULT (CURRENT_TIMESTAMP)
 );
 
 CREATE INDEX IF NOT EXISTS idx_agent_messages_session ON agent_messages(session_id);

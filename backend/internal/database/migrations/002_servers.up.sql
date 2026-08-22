@@ -4,7 +4,7 @@ CREATE TABLE IF NOT EXISTS server_groups (
     name            TEXT NOT NULL,
     description     TEXT,
     parent_id       TEXT REFERENCES server_groups(id),
-    created_at      TEXT DEFAULT (datetime('now'))
+    created_at      TEXT DEFAULT (CURRENT_TIMESTAMP)
 );
 
 CREATE TABLE IF NOT EXISTS servers (
@@ -24,8 +24,8 @@ CREATE TABLE IF NOT EXISTS servers (
     hardware_info   TEXT,
     status          TEXT DEFAULT 'unknown',
     last_heartbeat  TEXT,
-    created_at      TEXT DEFAULT (datetime('now')),
-    updated_at      TEXT DEFAULT (datetime('now'))
+    created_at      TEXT DEFAULT (CURRENT_TIMESTAMP),
+    updated_at      TEXT DEFAULT (CURRENT_TIMESTAMP)
 );
 
 CREATE INDEX IF NOT EXISTS idx_servers_status ON servers(status);

@@ -31,7 +31,7 @@ func (r *ApprovalRepository) Create(req *models.ApprovalRequest) error {
 	}
 	_, err := r.db.Exec(`
 		INSERT INTO approval_requests (id, request_type, status, requested_by, tool_name, tool_args, risk_level, dry_run_result, created_at)
-		VALUES (?, 'tool_approval', 'pending', ?, ?, ?, ?, ?, datetime('now'))`,
+		VALUES (?, 'tool_approval', 'pending', ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
 		req.ID, req.RequestedBy, req.ToolName, argsJSON, req.RiskLevel, dryRun)
 	return err
 }
@@ -111,7 +111,7 @@ func scanApprovals(rows *sql.Rows) ([]models.ApprovalRequest, error) {
 func (r *ApprovalRepository) Resolve(id, status string, approvedBy string) error {
 	args := []interface{}{status, id}
 	if approvedBy != "" {
-		_, err := r.db.Exec("UPDATE approval_requests SET status=?, approved_by=?, approved_at=datetime('now') WHERE id=?",
+		_, err := r.db.Exec("UPDATE approval_requests SET status=?, approved_by=?, approved_at=CURRENT_TIMESTAMP WHERE id=?",
 			status, approvedBy, id)
 		return err
 	}
@@ -131,7 +131,7 @@ func (r *AuditRepository) Record(entry *AuditEntry) error {
 	id := uuid.New().String()
 	_, err := r.db.Exec(`
 		INSERT INTO audit_logs (id, username, action, resource_type, resource_id, resource_name, method, path, status_code, agent_session_id, approval_id, created_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`,
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
 		id, entry.Username, entry.Action, entry.ResourceType,
 		entry.ResourceID, entry.ResourceName, entry.Method, entry.Path,
 		entry.StatusCode, entry.AgentSessionID, entry.ApprovalID)

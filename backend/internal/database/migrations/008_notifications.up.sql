@@ -9,8 +9,8 @@ CREATE TABLE IF NOT EXISTS notification_channels (
     type            TEXT NOT NULL,                 -- webhook, email, sms, im, console
     config          TEXT DEFAULT '{}',             -- 渠道专属配置 (URL/token/收件人等)
     is_enabled      INTEGER DEFAULT 1,
-    created_at      TEXT DEFAULT (datetime('now')),
-    updated_at      TEXT DEFAULT (datetime('now'))
+    created_at      TEXT DEFAULT (CURRENT_TIMESTAMP),
+    updated_at      TEXT DEFAULT (CURRENT_TIMESTAMP)
 );
 
 CREATE INDEX IF NOT EXISTS idx_channels_type ON notification_channels(type);
@@ -24,8 +24,8 @@ CREATE TABLE IF NOT EXISTS notification_templates (
     body            TEXT NOT NULL,                 -- 支持 {{.Var}} 占位符
     channels        TEXT DEFAULT '[]',             -- 默认渠道类型列表 ["email","webhook"]
     is_enabled      INTEGER DEFAULT 1,
-    created_at      TEXT DEFAULT (datetime('now')),
-    updated_at      TEXT DEFAULT (datetime('now'))
+    created_at      TEXT DEFAULT (CURRENT_TIMESTAMP),
+    updated_at      TEXT DEFAULT (CURRENT_TIMESTAMP)
 );
 
 CREATE INDEX IF NOT EXISTS idx_templates_event ON notification_templates(event_type);
@@ -41,11 +41,12 @@ CREATE TABLE IF NOT EXISTS notification_delivery_logs (
     body            TEXT,
     status          TEXT DEFAULT 'pending',         -- pending, sent, failed
     error_message   TEXT,
-    created_at      TEXT DEFAULT (datetime('now'))
+    created_at      TEXT DEFAULT (CURRENT_TIMESTAMP)
 );
 
 CREATE INDEX IF NOT EXISTS idx_delivery_status ON notification_delivery_logs(status);
 CREATE INDEX IF NOT EXISTS idx_delivery_event  ON notification_delivery_logs(event_type);
 
--- 给 alert_rules 增加通知渠道绑定 (JSON 数组, 存放 channel id)
+-- 给 alert_rules 增加通知渠道绑定 (JSON 数组, 存放 channel id)。
+-- NOTE: 幂等迁移不强制；重复运行需人工处理或走独立修复迁移。
 ALTER TABLE alert_rules ADD COLUMN notification_channels TEXT DEFAULT '[]';
