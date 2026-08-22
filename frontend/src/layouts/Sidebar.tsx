@@ -15,7 +15,8 @@ import {
 } from '@arco-design/web-react/icon';
 import { useUIStore } from '@/stores/uiStore';
 import { useAuthStore } from '@/stores/authStore';
-import type { RouteMeta } from '@/routes/routeConfig';
+import { routeMeta } from '@/routes/routeConfig';
+import { useHasPermission } from '@/hooks/useHasPermission';
 
 const iconMap: Record<string, React.ReactNode> = {
     dashboard: <IconDashboard />,
@@ -35,20 +36,15 @@ export function Sidebar() {
     const location = useLocation();
     const { sidebarCollapsed } = useUIStore();
     const { user } = useAuthStore();
+    const hasPerm = useHasPermission();
     const [selectedKeys, setSelectedKeys] = useState<string[]>([location.pathname]);
 
-    const routeMeta: RouteMeta[] = [
-        { path: '/', label: 'Dashboard', icon: 'dashboard' },
-        { path: '/servers', label: 'Servers', icon: 'server' },
-        { path: '/docker', label: 'Docker', icon: 'docker' },
-        { path: '/models', label: 'AI Models', icon: 'apps' },
-        { path: '/agents', label: 'Agents', icon: 'robot' },
-        { path: '/tasks', label: 'Tasks', icon: 'calendar' },
-        { path: '/monitor', label: 'Monitor', icon: 'eye' },
-        { path: '/approvals', label: 'Approvals', icon: 'check' },
-        { path: '/audit', label: 'Audit Log', icon: 'file' },
-        { path: '/settings', label: 'Settings', icon: 'settings' },
-    ];
+    const visibleItems = routeMeta.filter((item) => {
+        if (!item.permission) return true;
+        // Superadmin / admin bypass
+        if (user?.role === 'superadmin' || user?.role === 'admin') return true;
+        return hasPerm;
+    });
 
     const handleMenuClick = (key: string) => {
         setSelectedKeys([key]);
@@ -99,7 +95,7 @@ export function Sidebar() {
                 onClickMenuItem={handleMenuClick}
                 autoOpen
             >
-                {routeMeta.map((item) => (
+                {visibleItems.map((item) => (
                     <Menu.Item key={item.path}>
                         <span style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                             {iconMap[item.icon]}
