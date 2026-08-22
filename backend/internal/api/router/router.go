@@ -18,6 +18,7 @@ import (
 	"github.com/aicenter/aicenter/internal/pkg/logger"
 	"github.com/aicenter/aicenter/internal/repository"
 	"github.com/aicenter/aicenter/internal/service"
+	"github.com/aicenter/aicenter/internal/terminal"
 	"github.com/aicenter/aicenter/internal/websocket"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
@@ -152,6 +153,17 @@ func Setup(cfg *config.Config, db *sql.DB, hub *websocket.Hub, log *zap.Logger) 
 		// Wire agent approvals to the notification dispatcher.
 		agentService.SetNotifier(func(eventType, title, severity, message string, data map[string]string) {
 			_ = notifService.Notify(eventType, title, severity, message, data, nil)
+		})
+
+		// Web Terminal (完善与优化 Phase 7.1)
+		terminalMgr := terminal.NewManager(log)
+		terminalHandler := handler.NewTerminalHandler(terminalMgr, log)
+		protected.POST("/terminal/sessions", terminalHandler.CreateSession)
+		protected.GET("/terminal/sessions", terminalHandler.ListSessions)
+		protected.POST("/terminal/sessions/:id/close", terminalHandler.CloseSession)
+		// WebSocket bridge for an active terminal session.
+		r.GET("/ws/terminal", func(c *gin.Context) {
+			terminalHandler.Bridge(c.Writer, c.Request)
 		})
 
 		// Users

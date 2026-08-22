@@ -2,6 +2,7 @@ import { lazy } from 'react';
 
 const DashboardPage = lazy(() => import('@/features/dashboard/DashboardPage'));
 const ServerListPage = lazy(() => import('@/features/servers/ServerListPage'));
+const ServerDetailPage = lazy(() => import('@/features/servers/ServerDetailPage'));
 const DockerDashboardPage = lazy(() => import('@/features/docker/DockerDashboardPage'));
 const ModelListPage = lazy(() => import('@/features/ai/ModelListPage'));
 const AgentListPage = lazy(() => import('@/features/agents/AgentListPage'));
@@ -35,6 +36,7 @@ export const routeMeta: RouteMeta[] = [
 export const routesConfig = [
     { path: '/', element: <DashboardPage /> },
     { path: '/servers', element: <ServerListPage /> },
+    { path: '/servers/:id', element: <ServerDetailPage /> },
     { path: '/docker', element: <DockerDashboardPage /> },
     { path: '/models', element: <ModelListPage /> },
     { path: '/agents', element: <AgentListPage /> },

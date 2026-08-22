@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
     Typography,
     Card,
@@ -30,6 +31,7 @@ export default function ServerListPage() {
     const [limit] = useState(20);
     const [addModalVisible, setAddModalVisible] = useState(false);
     const [editingServer, setEditingServer] = useState<Server | null>(null);
+    const navigate = useNavigate();
 
     const { data, isLoading, refetch } = useServers(page, limit);
     const deleteMutation = useDeleteServer();
@@ -234,6 +236,10 @@ export default function ServerListPage() {
                         </div>
                     }
                     rowKey="id"
+                    onRow={(record) => ({
+                        style: { cursor: 'pointer' },
+                        onClick: () => navigate(`/servers/${record.id}`),
+                    })}
                 />
             </Card>
 
