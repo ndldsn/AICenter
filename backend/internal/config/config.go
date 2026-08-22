@@ -1,6 +1,7 @@
 package config
 
 import (
+	"errors"
 	"os"
 	"strconv"
 	"time"
@@ -47,12 +48,17 @@ type WebSocketConfig struct {
 	PongWait        time.Duration
 }
 
-// Load loads configuration from environment variables
+// Load loads configuration from environment variables.
+// JWT_SECRET is REQUIRED and never given a default: running without it would
+// let anyone forge tokens, so we fail fast instead of silently shipping unsafe.
 func Load() (*Config, error) {
 	port, _ := strconv.Atoi(getEnv("SERVER_PORT", "8080"))
 	logLevel := getEnv("LOG_LEVEL", "info")
 	dbURL := getEnv("DATABASE_URL", "sqlite://data/aicenter.db")
-	authSecret := getEnv("JWT_SECRET", "aIcEnTeR-sEcReT-kEeP-iN-sAfE-pLaCe")
+	authSecret := os.Getenv("JWT_SECRET")
+	if authSecret == "" {
+		return nil, errors.New("JWT_SECRET environment variable is required (do not hard-code a default)")
+	}
 
 	return &Config{
 		Server: ServerConfig{
