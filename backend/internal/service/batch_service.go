@@ -16,12 +16,22 @@ import (
 
 // BatchService runs a single command across many servers in parallel and
 // collects per-server results.
+type ServerLister interface {
+	List(offset, limit int) ([]*models.Server, int64, error)
+}
+
 type BatchService struct {
-	repo *repository.ServerRepository
+	repo ServerLister
 }
 
 func NewBatchService() *BatchService {
 	return &BatchService{repo: repository.NewServerRepository()}
+}
+
+// NewBatchServiceWithStore builds a BatchService backed by any ServerLister
+// (used by tests; the production path passes a concrete *ServerRepository).
+func NewBatchServiceWithStore(repo ServerLister) *BatchService {
+	return &BatchService{repo: repo}
 }
 
 // BatchResult is the outcome of running `command` on a single server.
