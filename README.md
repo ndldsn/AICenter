@@ -9,6 +9,17 @@ AI-powered operations control center for Linux servers, Docker, AI models, and A
 - **Real-time**: WebSocket
 - **AI**: OpenAI Compatible API + Anthropic + Gemini + DeepSeek + Ollama
 
+## Features
+
+- **Web Terminal** — browser-based PTY shell per server via WebSocket (`GET /ws/terminal?session=<id>`, `POST/GET /api/v1/terminal/sessions`, `DELETE /terminal/sessions/:id`).
+- **Batch Operations** — run one command across many servers at once (`POST /api/v1/servers/batch/command`), with per-host timeout, process-tree cleanup, and aggregated results.
+- **In-memory caching** — TTL+LRU cache for hot server reads (server list / get-by-id), invalidating on write.
+- **Provider rate limiting** — per-provider concurrency limiter (`ai.DefaultProviderConcurrency=4`) guards API credentials and prevents 429 storms.
+
+## API
+
+See `ARCHITECTURE.md` §7 for the full REST + WebSocket reference.
+
 ## Quick Start
 
 ### Development

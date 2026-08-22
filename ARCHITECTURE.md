@@ -1390,6 +1390,10 @@ VALUES ('admin', 'admin@aicenter.local', '$2a$10$...', (SELECT id FROM roles WHE
 ├── GET    /servers/:id/metrics    服务器指标
 ├── GET    /servers/:id/processes  进程列表
 ├── GET    /servers/:id/terminal   Terminal 会话 ID (WS)
+├── POST   /terminal/sessions      创建 terminal 会话 (PTY/WebSocket 桥)
+├── GET    /terminal/sessions      列出激活的 terminal 会话
+├── DELETE /terminal/sessions/:id  关闭 terminal 会话
+├── POST   /servers/batch/command  批量执行 (多服务器同命令)
 ├── GET    /servers/groups         服务器分组
 ├── POST   /servers/groups         创建分组
 ├── PUT    /servers/groups/:id     更新分组
@@ -2975,8 +2979,8 @@ sudo aicenter-agent install \
 ```
 - [x] Web Terminal (PTY/WebSocket backend + xterm.js frontend)
 - [x] 多服务器批量操作 (batch command service + handler + batch UI)
-- [ ] 性能优化
-- [ ] 安全加固
+- [x] 性能优化 (in-process TTL+LRU cache for server reads)
+- [x] 安全加固 (per-provider concurrency limiter)
 - [ ] 文档完善
 - [ ] 测试覆盖
 ```
@@ -2988,6 +2992,31 @@ sudo aicenter-agent install \
 - REST 路由 `/api/v1/terminal/sessions`（增/查/删） + WebSocket `/ws/terminal?session=<id>`。
 - 前端 `features/servers/Terminal.tsx`（xterm.js fit/Resize） + `ServerDetailPage.tsx` 服务器详情页「概览/终端」双 Tab，点击服务器跳转。
 - E2E 验证：真实 PTY 回显 `echo HELLO_TERMINAL_E2E`，状态 200，列表与关闭均 PASS。
+
+#### 7.2 多服务器批量操作 状态
+
+**已完成（commit `c794ccc`）**：
+- 服务 `internal/service/batch_service.go`：接收 `command` + `server_ids[]`，并发执行，单 server 超时 + 进程树清理，返回 `BatchResult` 列表（`server_id / host / stdout / stderr / exit_code / duration / status / error`）。
+- localhost/127.0.0.1 走本地 `exec`（可验证）；其它 host 走已存的 `pkg/ssh` 客户端。
+- 路由 `POST /api/v1/servers/batch/command`，鉴权透传 `MockAuth`。
+- 前端 `features/servers/BatchCommandPage.tsx`：服务器多选 + 命令输入 + 超时 + 实时结果表格；路由 `/servers/batch`，导航栏新 Tab。
+- E2E：echo 回显 / 非零退出码 / 超时 surfaces 为 failure，全部 PASS。
+
+#### 7.3 性能优化 状态
+
+**已完成（commit `5fc8210`）**：
+- 新增 `internal/pkg/cache`：依赖-free 内存 TTL+LRU `Store` 接口 (`Get/Set/Delete/Clear/Stats`)。
+- 注入 `ServerService`：`ListServers`/`GetServer` 走缓存-旁路；`Create/Update/Delete` 使缓存失效。
+- Benchmarks：`BenchmarkMemoryStore_GetHit` **28.37 ns/op，0 allocs**；miss 10.27 ns/op。
+- 验证：在缓存层激活后，terminal + batch 两个 E2E 均仍 PASS。
+
+#### 7.4 安全加固 状态
+
+**已完成（commit `9babbf9`）**：
+- `internal/ai/limited.go`：`NewLimited(Client, max)` 包装器，用信号量 `chan struct{}` 硬控每 provider 最大并发调用数 (`DefaultProviderConcurrency=4`)，防止 credential abuse / 429 风暴 / 单 provider 耗尽后端。
+- 所有 provider client 通过 `Factory.Build` 自动被 `NewLimited` 包装，无需调用方改动。
+- 单元测试 `limited_test.go`：peak concurrency == cap；超出 cap 时 context-deadline fast-fail；`max<=0` 透传。
+- 修复 `terminal.Session` JSON 序列化 (`ID`→`id`) 及 terminal E2E 列表顺序（在 WS 断连前列出会话）。
 
 ---
 
