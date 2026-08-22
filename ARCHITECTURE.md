@@ -2973,13 +2973,21 @@ sudo aicenter-agent install \
 ### Phase 7: 完善与优化 (持续)
 
 ```
-- Web Terminal
-- 多服务器批量操作
-- 性能优化
-- 安全加固
-- 文档完善
-- 测试覆盖
+- [x] Web Terminal (PTY/WebSocket backend + xterm.js frontend)
+- [ ] 多服务器批量操作
+- [ ] 性能优化
+- [ ] 安全加固
+- [ ] 文档完善
+- [ ] 测试覆盖
 ```
+
+#### 7.1 Web Terminal 状态
+
+**已完成（commit `462b914`）**：
+- 后端 `internal/terminal/`：跨平台会话管理器。POSIX 用 `creack/pty` 真 PTY；Windows 用 stdin/stdout pipe 多路复用 stderr。保持统一的 WebSocket 信元（`input`/`resize`/`data`/`exit`）。
+- REST 路由 `/api/v1/terminal/sessions`（增/查/删） + WebSocket `/ws/terminal?session=<id>`。
+- 前端 `features/servers/Terminal.tsx`（xterm.js fit/Resize） + `ServerDetailPage.tsx` 服务器详情页「概览/终端」双 Tab，点击服务器跳转。
+- E2E 验证：真实 PTY 回显 `echo HELLO_TERMINAL_E2E`，状态 200，列表与关闭均 PASS。
 
 ---
 
