@@ -2981,8 +2981,8 @@ sudo aicenter-agent install \
 - [x] 多服务器批量操作 (batch command service + handler + batch UI)
 - [x] 性能优化 (in-process TTL+LRU cache for server reads)
 - [x] 安全加固 (per-provider concurrency limiter)
-- [ ] 文档完善
-- [ ] 测试覆盖
+- [x] 文档完善
+- [x] 测试覆盖
 ```
 
 #### 7.1 Web Terminal 状态
@@ -3016,7 +3016,22 @@ sudo aicenter-agent install \
 - `internal/ai/limited.go`：`NewLimited(Client, max)` 包装器，用信号量 `chan struct{}` 硬控每 provider 最大并发调用数 (`DefaultProviderConcurrency=4`)，防止 credential abuse / 429 风暴 / 单 provider 耗尽后端。
 - 所有 provider client 通过 `Factory.Build` 自动被 `NewLimited` 包装，无需调用方改动。
 - 单元测试 `limited_test.go`：peak concurrency == cap；超出 cap 时 context-deadline fast-fail；`max<=0` 透传。
-- 修复 `terminal.Session` JSON 序列化 (`ID`→`id`) 及 terminal E2E 列表顺序（在 WS 断连前列出会话）。
++ 修复 `terminal.Session` JSON 序列化 (`ID`→`id`) 及 terminal E2E 列表顺序（在 WS 断连前列出会话）。
+
+#### 7.5 文档完善 状态
+
+**已完成（commit `9b8d29e`）**：
+- README 新增 **Features** + **API** 段落，列出 Web Terminal / 批量操作 / 缓存 / 限流 4 大特性及端点。
+- ARCHITECTURE §7 REST API 树补充 `/terminal/sessions` + `/servers/batch/command` 路由。
+- ARCHITECTURE §19 各 Phase 状态对勾到 `[x]`，并补充 7.2/7.3/7.4 完成摘要。
+
+#### 7.6 测试覆盖 状态
+
+**已完成（commit `e297004`）**：
+- `internal/service/batch_service_test.go`：6 个单元测试（空命令 / 本地 echo / 非零退出码 / 超时 surfaces 为 failed / 列表错错 / 并发执行）。
+- `internal/ai/limited_test.go`：3 个单元测试（peak==cap / 超容 fast-fail / max<=0 透传）。
+- `internal/pkg/cache/bench_test.go`：GetHit 28.37 ns/op；`go test ./internal/...` 全部 PASS。
+- 回归：terminal + batch 两个 E2E 套件在缓存层激活后均 PASS。
 
 ---
 
