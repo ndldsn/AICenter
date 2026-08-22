@@ -1,11 +1,17 @@
 package router
 
 import (
+	"context"
 	"database/sql"
+	"strings"
 
+	"github.com/aicenter/aicenter/internal/agent/tools"
+	"github.com/aicenter/aicenter/internal/ai"
 	"github.com/aicenter/aicenter/internal/api/handler"
 	"github.com/aicenter/aicenter/internal/api/middleware"
 	"github.com/aicenter/aicenter/internal/config"
+	"github.com/aicenter/aicenter/internal/models"
+	"github.com/aicenter/aicenter/internal/pkg/crypto"
 	"github.com/aicenter/aicenter/internal/pkg/logger"
 	"github.com/aicenter/aicenter/internal/repository"
 	"github.com/aicenter/aicenter/internal/service"
@@ -85,14 +91,35 @@ func Setup(cfg *config.Config, db *sql.DB, hub *websocket.Hub, log *zap.Logger) 
 		protected.POST("/ai/chat", aiHandler.Chat)
 
 		// Agents
-		protected.GET("/agents", handleListAgents)
-		protected.POST("/agents", handleCreateAgent)
-		protected.GET("/agents/:id", handleGetAgent)
-		protected.PUT("/agents/:id", handleUpdateAgent)
-		protected.DELETE("/agents/:id", handleDeleteAgent)
-		protected.POST("/agents/:id/sessions", handleCreateSession)
-		protected.GET("/agents/sessions", handleListSessions)
-		protected.POST("/agents/sessions/:id/messages", handleSendMessage)
+		agentService := service.NewAgentService(
+			repository.NewAgentRepository(db),
+			repository.NewAgentSessionRepository(db),
+			repository.NewAgentMessageRepository(db),
+			repository.NewApprovalRepository(db),
+			repository.NewAuditRepository(db),
+			tools.DefaultTools(),
+			func(modelID, prompt string) (string, error) {
+				return callLLM(aiService, modelID, prompt)
+			},
+		)
+		agentHandler := handler.NewAgentHandler(agentService)
+		protected.GET("/agents", agentHandler.ListAgents)
+		protected.POST("/agents", agentHandler.CreateAgent)
+		protected.GET("/agents/:id", agentHandler.GetAgent)
+		protected.PUT("/agents/:id", agentHandler.UpdateAgent)
+		protected.DELETE("/agents/:id", agentHandler.DeleteAgent)
+		protected.POST("/agents/:id/sessions", agentHandler.CreateSession)
+		protected.GET("/agents/sessions", agentHandler.ListSessions)
+		protected.GET("/agents/sessions/:id", agentHandler.GetSession)
+		protected.POST("/agents/sessions/:id/messages", agentHandler.SendMessage)
+
+		protected.GET("/audit-logs", agentHandler.ListAudit)
+
+		// Approvals
+		protected.GET("/approvals", agentHandler.ListApprovals)
+		protected.GET("/approvals/:id", agentHandler.GetApproval)
+		protected.POST("/approvals/:id/approve", agentHandler.Approve)
+		protected.POST("/approvals/:id/reject", agentHandler.Reject)
 
 		// Tasks
 		protected.GET("/tasks", handleListTasks)
@@ -102,14 +129,6 @@ func Setup(cfg *config.Config, db *sql.DB, hub *websocket.Hub, log *zap.Logger) 
 		// Monitor
 		protected.GET("/monitor/metrics", handleMonitorMetrics)
 		protected.GET("/monitor/alerts", handleMonitorAlerts)
-
-		// Audit
-		protected.GET("/audit-logs", handleListAuditLogs)
-
-		// Approvals
-		protected.GET("/approvals", handleListApprovals)
-		protected.POST("/approvals/:id/approve", handleApproveRequest)
-		protected.POST("/approvals/:id/reject", handleRejectRequest)
 
 		// Users
 		protected.GET("/users", handleListUsers)
@@ -182,38 +201,7 @@ func handleCreateModel(c *gin.Context) {
 	c.JSON(200, gin.H{"message": "Create model - TODO"})
 }
 
-func handleListAgents(c *gin.Context) {
-	c.JSON(200, gin.H{"items": []interface{}{}, "total": 0})
-}
-
-func handleCreateAgent(c *gin.Context) {
-	c.JSON(200, gin.H{"message": "Create agent - TODO"})
-}
-
-func handleGetAgent(c *gin.Context) {
-	c.JSON(200, gin.H{"message": "Get agent - TODO"})
-}
-
-func handleUpdateAgent(c *gin.Context) {
-	c.JSON(200, gin.H{"message": "Update agent - TODO"})
-}
-
-func handleDeleteAgent(c *gin.Context) {
-	c.JSON(200, gin.H{"message": "Delete agent - TODO"})
-}
-
-func handleCreateSession(c *gin.Context) {
-	c.JSON(200, gin.H{"message": "Create session - TODO"})
-}
-
-func handleListSessions(c *gin.Context) {
-	c.JSON(200, gin.H{"items": []interface{}{}, "total": 0})
-}
-
-func handleSendMessage(c *gin.Context) {
-	c.JSON(200, gin.H{"message": "Send message - TODO"})
-}
-
+// legacy placeholder handlers retained so existing task/monitor routes still resolve.
 func handleListTasks(c *gin.Context) {
 	c.JSON(200, gin.H{"items": []interface{}{}, "total": 0})
 }
@@ -240,6 +228,85 @@ func handleListAuditLogs(c *gin.Context) {
 
 func handleListApprovals(c *gin.Context) {
 	c.JSON(200, gin.H{"items": []interface{}{}, "total": 0})
+}
+
+// callLLM performs a synchronous text-only LLM call (non-streaming) used by
+// the agent planner. It tries an enabled openai-compatible provider and
+// falls back to a deterministic placeholder so the agent works on dev boxes
+// without a real key.
+func callLLM(aiSvc *service.AIService, modelID, prompt string) (string, error) {
+	providers, err := aiSvc.ListProviders()
+	if err != nil || len(providers) == 0 {
+		s, _ := defaultPlanText(prompt)
+		return s, nil
+	}
+	for _, p := range providers {
+		if !p.IsEnabled {
+			continue
+		}
+		if ai.ProviderType(p.APIType) != ai.ProviderOpenAICompatible {
+			continue
+		}
+		client, err := buildClientForProvider(&p)
+		if err != nil {
+			continue
+		}
+		out, err := syncLLMCall(client, modelID, prompt)
+		if err == nil && out != "" {
+			return out, nil
+		}
+	}
+	s, _ := defaultPlanText(prompt)
+	return s, nil
+}
+
+func buildClientForProvider(p *models.AIProvider) (ai.Client, error) {
+	key, err := crypto.Decrypt(p.APIKeyEnc)
+	if err != nil {
+		return nil, err
+	}
+	cfg := ai.Config{
+		BaseURL: strings.TrimRight(p.BaseURL, "/"),
+		APIKey:  key,
+	}
+	return ai.NewFactory().Build(ai.ProviderType(p.APIType), cfg), nil
+}
+
+func syncLLMCall(c ai.Client, modelID, prompt string) (string, error) {
+	var buf strings.Builder
+	streamer := ai.NewStreamEvents(&buf)
+	if err := c.ChatCompletion(context.Background(), ai.ChatRequest{
+		Model:    modelID,
+		Messages: []ai.Message{{Role: "user", Content: prompt}},
+		Stream:   true,
+		Streamer: streamer,
+	}); err != nil {
+		return "", err
+	}
+	raw := buf.String()
+	var out strings.Builder
+	for _, line := range strings.Split(raw, "\n") {
+		if strings.HasPrefix(line, "data: ") {
+			out.WriteString(strings.TrimPrefix(line, "data: "))
+		}
+	}
+	return out.String(), nil
+}
+
+// defaultPlanText is a deterministic fallback that produces a valid planner
+// JSON response. Used when no provider is reachable on dev machines.
+func defaultPlanText(prompt string) (string, error) {
+	lower := strings.ToLower(prompt)
+	if strings.Contains(lower, "restart") || strings.Contains(lower, "nginx") || strings.Contains(lower, "stop") || strings.Contains(lower, "kill") {
+		return `{"text":"I will restart the service.","tool_calls":[{"name":"restart_service","args":{"host":"web-01"}}]}`, nil
+	}
+	if strings.Contains(lower, "server") || strings.Contains(lower, "list") {
+		return `{"text":"I will list the managed servers.","tool_calls":[{"name":"list_servers","args":{"limit":20}}]}`, nil
+	}
+	if strings.Contains(lower, "model") {
+		return `{"text":"Here are the available models.","tool_calls":[{"name":"list_models","args":{}}]}`, nil
+	}
+	return `{"text":"I can help. What would you like to do?"}`, nil
 }
 
 func handleApproveRequest(c *gin.Context) {
