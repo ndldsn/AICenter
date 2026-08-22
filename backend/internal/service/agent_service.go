@@ -25,6 +25,8 @@ type AgentService struct {
 	toolReg      *tools.Registry
 	approvalQ    *approval.Queue
 	llmCall      func(modelID, prompt string) (string, error)
+	// notify is an optional Phase 7 hook for approval notifications.
+	notify func(eventType, title, severity, message string, data map[string]string)
 }
 
 func NewAgentService(
@@ -46,6 +48,11 @@ func NewAgentService(
 		approvalQ:    approval.NewQueue(),
 		llmCall:      llmCall,
 	}
+}
+
+// SetNotifier wires the Phase 7 notification hook (called on approval events).
+func (s *AgentService) SetNotifier(fn func(eventType, title, severity, message string, data map[string]string)) {
+	s.notify = fn
 }
 
 func (s *AgentService) ListAgents(enabled *bool) ([]models.Agent, error) {
@@ -140,6 +147,17 @@ func (s *AgentService) SendToSession(sessionID string, userMessage string, userI
 					Metadata: jsonMarshal(map[string]any{"turn": i}),
 				})
 				result.RequiresApproval = true
+				// Phase 7: notify approval.requested
+				if s.notify != nil {
+					data := map[string]string{
+						"approval_id": approv.ID,
+						"tool":        call.Name,
+						"session_id":  sessionID,
+						"user_id":     userID,
+					}
+					s.notify("approval.requested", "需要审批: "+call.Name, "warning",
+						"Agent 请求执行工具 "+call.Name+"，等待审批。", data)
+				}
 				return result, nil
 			}
 			_ = s.msgRepo.Append(&models.AgentMessage{
@@ -209,6 +227,10 @@ func (s *AgentService) Approve(approvalID, approvedBy string) error {
 		return err
 	}
 	s.approvalQ.Resolve(approvalID, models.ApprovalApproved)
+	if s.notify != nil {
+		s.notify("approval.resolved", "审批已通过: "+approvalID, "info", "审批请求 "+approvalID+" 已被批准。",
+			map[string]string{"approval_id": approvalID, "result": "approved", "by": approvedBy})
+	}
 	return nil
 }
 
@@ -217,6 +239,10 @@ func (s *AgentService) Reject(approvalID string) error {
 		return err
 	}
 	s.approvalQ.Resolve(approvalID, models.ApprovalRejected)
+	if s.notify != nil {
+		s.notify("approval.resolved", "审批已拒绝: "+approvalID, "info", "审批请求 "+approvalID+" 已被拒绝。",
+			map[string]string{"approval_id": approvalID, "result": "rejected"})
+	}
 	return nil
 }
 

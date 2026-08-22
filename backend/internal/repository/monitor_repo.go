@@ -183,27 +183,33 @@ func (r *MonitorRepository) DeleteMetricsBefore(t time.Time) (int64, error) {
 
 // ---- Alert rules ----
 
-const ruleCols = `id, name, metric_name, condition, threshold, duration, severity, server_id, is_enabled, cooldown, created_at, updated_at`
+const ruleCols = `id, name, metric_name, condition, threshold, duration, severity, server_id, is_enabled, cooldown, notification_channels, created_at, updated_at`
 
 func (r *MonitorRepository) CreateRule(rule *models.AlertRule) error {
 	rule.ID = uuid.New().String()
 	now := time.Now().UTC()
 	rule.CreatedAt, rule.UpdatedAt = now, now
+	if rule.NotificationChannels == "" {
+		rule.NotificationChannels = "[]"
+	}
 	_, err := r.db.Exec(`
-		INSERT INTO alert_rules (id, name, metric_name, condition, threshold, duration, severity, server_id, is_enabled, cooldown, created_at, updated_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))`,
+		INSERT INTO alert_rules (id, name, metric_name, condition, threshold, duration, severity, server_id, is_enabled, cooldown, notification_channels, created_at, updated_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))`,
 		rule.ID, rule.Name, rule.MetricName, rule.Condition, rule.Threshold,
-		rule.Duration, rule.Severity, nullIfEmpty(deref(rule.ServerID)), boolInt(rule.IsEnabled), rule.Cooldown)
+		rule.Duration, rule.Severity, nullIfEmpty(deref(rule.ServerID)), boolInt(rule.IsEnabled), rule.Cooldown, rule.NotificationChannels)
 	return err
 }
 
 func (r *MonitorRepository) UpdateRule(id string, upd *models.AlertRule) (*models.AlertRule, error) {
+	if upd.NotificationChannels == "" {
+		upd.NotificationChannels = "[]"
+	}
 	res, err := r.db.Exec(`
 		UPDATE alert_rules SET name=?, metric_name=?, condition=?, threshold=?, duration=?,
-		       severity=?, server_id=?, is_enabled=?, cooldown=?, updated_at=datetime('now')
+		       severity=?, server_id=?, is_enabled=?, cooldown=?, notification_channels=?, updated_at=datetime('now')
 		WHERE id=?`,
 		upd.Name, upd.MetricName, upd.Condition, upd.Threshold, upd.Duration,
-		upd.Severity, nullIfEmpty(deref(upd.ServerID)), boolInt(upd.IsEnabled), upd.Cooldown, id)
+		upd.Severity, nullIfEmpty(deref(upd.ServerID)), boolInt(upd.IsEnabled), upd.Cooldown, upd.NotificationChannels, id)
 	if err != nil {
 		return nil, err
 	}
@@ -257,9 +263,10 @@ func scanRule(sc rowScanner) (*models.AlertRule, error) {
 	var rule models.AlertRule
 	var serverID sql.NullString
 	var enabled int
+	var notifCh sql.NullString
 	var created, updated string
 	if err := sc.Scan(&rule.ID, &rule.Name, &rule.MetricName, &rule.Condition, &rule.Threshold,
-		&rule.Duration, &rule.Severity, &serverID, &enabled, &rule.Cooldown, &created, &updated); err != nil {
+		&rule.Duration, &rule.Severity, &serverID, &enabled, &rule.Cooldown, &notifCh, &created, &updated); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, ErrAlertRuleNotFound
 		}
@@ -269,6 +276,9 @@ func scanRule(sc rowScanner) (*models.AlertRule, error) {
 	if serverID.Valid && serverID.String != "" {
 		s := serverID.String
 		rule.ServerID = &s
+	}
+	if notifCh.Valid && notifCh.String != "" {
+		rule.NotificationChannels = notifCh.String
 	}
 	rule.CreatedAt, _ = time.Parse("2006-01-02 15:04:05", created)
 	if rule.CreatedAt.IsZero() {

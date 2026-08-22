@@ -32,6 +32,17 @@ type Engine struct {
 	mu    sync.Mutex
 	state map[string][]sample // ruleKey -> recent samples for duration checks
 	stop  chan struct{}
+
+	// notifier is invoked when an alert fires. Optional; nil disables linkage.
+	notifier func(eventType, title, severity, message string, data map[string]string, channelIDs []string)
+}
+
+// SetNotifier wires an external notifier (Phase 7) so fired alerts dispatch
+// notifications. The callback receives the rule's bound channel ids.
+func (e *Engine) SetNotifier(fn func(eventType, title, severity, message string, data map[string]string, channelIDs []string)) {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	e.notifier = fn
 }
 
 type sample struct {
@@ -225,6 +236,25 @@ func (e *Engine) EvaluateRules(now time.Time) error {
 			if err := e.repo.CreateEvent(ev); err != nil {
 				return fmt.Errorf("create alert event: %w", err)
 			}
+
+			// Phase 7: dispatch notifications for this alert (honouring the
+			// rule's bound channel ids; empty → dispatcher picks by template).
+			e.mu.Lock()
+			notifyFn := e.notifier
+			e.mu.Unlock()
+			if notifyFn != nil {
+				var channelIDs []string
+				channelIDs = repository.ParseChannelIDs(rule.NotificationChannels)
+				data := map[string]string{
+					"rule_id":     rule.ID,
+					"rule_name":   rule.Name,
+					"server_id":   sid,
+					"metric_name": rule.MetricName,
+					"value":       trimFloat(m.Value),
+					"threshold":   trimFloat(rule.Threshold),
+				}
+				notifyFn("alert.fired", "告警触发: "+rule.Name, ev.Severity, ev.Message, data, channelIDs)
+			}
 		}
 	}
 	return nil
@@ -267,6 +297,11 @@ func sevLabel(s string) string {
 	default:
 		return "[WARNING]"
 	}
+}
+
+func trimFloat(v float64) string {
+	s := fmt.Sprintf("%.2f", v)
+	return s
 }
 
 func unitSuffix(u string) string {

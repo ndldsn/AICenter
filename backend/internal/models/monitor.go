@@ -28,6 +28,9 @@ type AlertRule struct {
 	// cannot express both on a plain bool). When omitted the rule is enabled.
 	IsEnabledSet bool `json:"-"`
 	Cooldown  int       `json:"cooldown"` // seconds between repeat alerts
+	// NotificationChannels is a JSON array of notification_channel ids bound to
+	// the rule (Phase 7). Empty → dispatcher selects channels by template.
+	NotificationChannels string `json:"notification_channels,omitempty"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 }

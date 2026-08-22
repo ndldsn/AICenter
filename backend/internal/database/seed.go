@@ -84,5 +84,37 @@ func SeedData(db *sql.DB) error {
 		}
 	}
 
+	// Phase 7: default notification channel + templates so the pipeline works
+	// out of the box (console channel is safe in dev; webhook can be added).
+	_, err = db.Exec(`
+		INSERT OR IGNORE INTO notification_channels (id, name, type, config, is_enabled, created_at, updated_at)
+		VALUES ('ch-console', 'Console (dev)', 'console', '{}', 1, datetime('now'), datetime('now'))
+	`)
+	if err != nil {
+		return err
+	}
+	templates := []struct {
+		id, name, eventType, subject, body, channels string
+	}{
+		{"tpl-alert", "告警触发通知", "alert.fired", "[AICenter 告警] {{.Title}}",
+			"告警事件：{{.Title}}\n级别：{{.Severity}}\n详情：{{.Message}}\n服务器：{{.Data.server_id}}  指标：{{.Data.metric_name}}  值：{{.Data.value}} / 阈值：{{.Data.threshold}}",
+			`["console"]`},
+		{"tpl-approval-req", "审批请求通知", "approval.requested", "[AICenter 审批] {{.Title}}",
+			"有新的审批请求：{{.Title}}\n详情：{{.Message}}\n请登录控制台处理。",
+			`["console"]`},
+		{"tpl-approval-res", "审批结果通知", "approval.resolved", "[AICenter 审批] {{.Title}}",
+			"审批结果：{{.Title}}\n{{.Message}}",
+			`["console"]`},
+	}
+	for _, t := range templates {
+		_, err = db.Exec(`
+			INSERT OR IGNORE INTO notification_templates (id, name, event_type, subject, body, channels, is_enabled, created_at, updated_at)
+			VALUES (?, ?, ?, ?, ?, ?, 1, datetime('now'), datetime('now'))
+		`, t.id, t.name, t.eventType, t.subject, t.body, t.channels)
+		if err != nil {
+			return err
+		}
+	}
+
 	return nil
 }

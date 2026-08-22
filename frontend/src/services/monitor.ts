@@ -29,6 +29,7 @@ export interface AlertRule {
     server_id?: string | null;
     is_enabled: boolean;
     cooldown: number;
+    notification_channels?: string[];
     created_at: string;
     updated_at: string;
 }

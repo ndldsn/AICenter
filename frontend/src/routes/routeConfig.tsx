@@ -9,6 +9,7 @@ const TaskListPage = lazy(() => import('@/features/tasks/TaskListPage'));
 const MonitorDashboardPage = lazy(() => import('@/features/monitor/MonitorDashboardPage'));
 const PendingApprovalPage = lazy(() => import('@/features/approvals/PendingApprovalPage'));
 const AuditLogPage = lazy(() => import('@/features/audit/AuditLogPage'));
+const NotificationCenterPage = lazy(() => import('@/features/notification/NotificationCenterPage'));
 const SettingsPage = lazy(() => import('@/features/settings/SettingsPage'));
 
 export interface RouteMeta {
@@ -25,6 +26,7 @@ export const routeMeta: RouteMeta[] = [
     { path: '/agents', label: 'Agents', icon: 'robot' },
     { path: '/tasks', label: 'Tasks', icon: 'calendar' },
     { path: '/monitor', label: 'Monitor', icon: 'eye' },
+    { path: '/notifications', label: 'Notifications', icon: 'notification' },
     { path: '/approvals', label: 'Approvals', icon: 'check' },
     { path: '/audit', label: 'Audit Log', icon: 'file' },
     { path: '/settings', label: 'Settings', icon: 'settings' },
@@ -38,6 +40,7 @@ export const routesConfig = [
     { path: '/agents', element: <AgentListPage /> },
     { path: '/tasks', element: <TaskListPage /> },
     { path: '/monitor', element: <MonitorDashboardPage /> },
+    { path: '/notifications', element: <NotificationCenterPage /> },
     { path: '/approvals', element: <PendingApprovalPage /> },
     { path: '/audit', element: <AuditLogPage /> },
     { path: '/settings', element: <SettingsPage /> },

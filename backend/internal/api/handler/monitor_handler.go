@@ -121,19 +121,38 @@ func ruleFromBody(c *gin.Context) (*models.AlertRule, bool) {
 		response.BadRequest(c, err.Error())
 		return nil, false
 	}
-	var r models.AlertRule
+	// Use a local struct so a JSON array in notification_channels does not
+	// abort the whole decode (the model stores it as a string column).
+	var r struct {
+		models.AlertRule
+		NotifChannels json.RawMessage `json:"notification_channels"`
+	}
 	if err := json.Unmarshal(body, &r); err != nil {
 		response.BadRequest(c, err.Error())
 		return nil, false
+	}
+	rule := r.AlertRule
+	if len(r.NotifChannels) > 0 {
+		var arr []string
+		if json.Unmarshal(r.NotifChannels, &arr) == nil {
+			if b, err := json.Marshal(arr); err == nil {
+				rule.NotificationChannels = string(b)
+			}
+		} else {
+			var s string
+			if json.Unmarshal(r.NotifChannels, &s) == nil {
+				rule.NotificationChannels = s
+			}
+		}
 	}
 	// distinguish explicit "is_enabled": false from an omitted field
 	var raw map[string]json.RawMessage
 	if json.Unmarshal(body, &raw) == nil {
 		if _, ok := raw["is_enabled"]; ok {
-			r.IsEnabledSet = true
+			rule.IsEnabledSet = true
 		}
 	}
-	return &r, true
+	return &rule, true
 }
 
 func (h *MonitorHandler) CreateRule(c *gin.Context) {

@@ -13,6 +13,7 @@ import (
 	"github.com/aicenter/aicenter/internal/config"
 	"github.com/aicenter/aicenter/internal/models"
 	"github.com/aicenter/aicenter/internal/monitor"
+	"github.com/aicenter/aicenter/internal/notifier"
 	"github.com/aicenter/aicenter/internal/pkg/crypto"
 	"github.com/aicenter/aicenter/internal/pkg/logger"
 	"github.com/aicenter/aicenter/internal/repository"
@@ -136,6 +137,22 @@ func Setup(cfg *config.Config, db *sql.DB, hub *websocket.Hub, log *zap.Logger) 
 		monitorService := service.NewMonitorService(monitorRepo, engine)
 		monitorHandler := handler.NewMonitorHandler(monitorService)
 		monitorHandler.RegisterRoutes(protected, middleware.MockAuth())
+
+		// Notifications (Phase 7)
+		notifRepo := repository.NewNotificationRepository(db)
+		notifDispatcher := notifier.NewDispatcher(notifRepo, log)
+		notifService := service.NewNotificationService(notifRepo, notifDispatcher)
+		notifHandler := handler.NewNotificationHandler(notifService)
+		notifHandler.RegisterRoutes(protected, middleware.MockAuth())
+		// Wire the alert engine to the notification dispatcher so fired alerts
+		// trigger notifications (honouring each rule's bound channels).
+		engine.SetNotifier(func(eventType, title, severity, message string, data map[string]string, channelIDs []string) {
+			_ = notifService.Notify(eventType, title, severity, message, data, channelIDs)
+		})
+		// Wire agent approvals to the notification dispatcher.
+		agentService.SetNotifier(func(eventType, title, severity, message string, data map[string]string) {
+			_ = notifService.Notify(eventType, title, severity, message, data, nil)
+		})
 
 		// Users
 		protected.GET("/users", handleListUsers)
