@@ -2974,7 +2974,7 @@ sudo aicenter-agent install \
 
 ```
 - [x] Web Terminal (PTY/WebSocket backend + xterm.js frontend)
-- [ ] 多服务器批量操作
+- [x] 多服务器批量操作 (batch command service + handler + batch UI)
 - [ ] 性能优化
 - [ ] 安全加固
 - [ ] 文档完善
