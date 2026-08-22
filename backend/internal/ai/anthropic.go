@@ -29,24 +29,33 @@ func (c *anthropicClient) ChatCompletion(ctx context.Context, req ChatRequest) e
 	return fmt.Errorf("%w", ErrAnthropicNotImplemented)
 }
 
+// DefaultProviderConcurrency caps the number of simultaneous outbound calls to
+// any single provider. This is a security/DoS guard: it prevents credential
+// abuse and 429 storms from bursts, and keeps one hot provider from starving
+// the backend.
+const DefaultProviderConcurrency = 4
+
 // Factory builds the right client for the given provider type.
 type Factory struct{}
 
 func NewFactory() *Factory { return &Factory{} }
 
 func (f *Factory) Build(p ProviderType, cfg Config) Client {
+	var c Client
 	switch p {
 	case ProviderOpenAICompatible:
-		return NewOpenAICompatClient(cfg)
+		c = NewOpenAICompatClient(cfg)
 	case ProviderAnthropic:
-		return NewAnthropicClient(cfg)
+		c = NewAnthropicClient(cfg)
 	case ProviderMock:
-		return &MockClient{}
+		c = &MockClient{}
 	default:
 		// Gemini and any unknown type fall back to mock-ish behaviour so
 		// seed data does not break the app.
-		return &fallbackClient{cfg: cfg, kind: p}
+		c = &fallbackClient{cfg: cfg, kind: p}
 	}
+	// Wrap every client with a per-provider concurrency limiter.
+	return NewLimited(c, DefaultProviderConcurrency)
 }
 
 type fallbackClient struct {

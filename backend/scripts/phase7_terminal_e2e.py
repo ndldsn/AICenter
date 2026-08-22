@@ -59,17 +59,17 @@ while time.time() < deadline:
             break
     if any("HELLO_TERMINAL_E2E" in r for r in received):
         break
-ws.close()
 
 output = "".join(received)
 check("pty echoed command output", "HELLO_TERMINAL_E2E" in output)
 
-# 3. List sessions shows our session
+# 3. List sessions shows our session (while the WS is still connected).
 st, lst = req("GET", "/terminal/sessions")
 items = lst.get("data", {}).get("items") or lst.get("items") or []
 check("list terminal sessions", st == 200 and any(s.get("id") == sid for s in items))
 
 # 4. Close session
+ws.close()
 st, _ = req("POST", f"/terminal/sessions/{sid}/close")
 check("close terminal session", st == 200)
 

@@ -20,10 +20,10 @@ import (
 
 // Session is a running shell bridged to the caller over a pipe.
 type Session struct {
-	ID        string
-	ServerID  string
-	Command   string
-	CreatedAt time.Time
+	ID        string    `json:"id"`
+	ServerID  string    `json:"server_id"`
+	Command   string    `json:"command"`
+	CreatedAt time.Time `json:"created_at"`
 	mu        sync.Mutex
 	cmd       *exec.Cmd
 	stdin     io.WriteCloser
