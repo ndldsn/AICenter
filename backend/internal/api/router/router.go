@@ -166,6 +166,10 @@ func Setup(cfg *config.Config, db *sql.DB, hub *websocket.Hub, log *zap.Logger) 
 			terminalHandler.Bridge(c.Writer, c.Request)
 		})
 
+		// Batch operations (多服务器批量操作)
+		batchHandler := handler.NewBatchHandler(service.NewBatchService())
+		batchHandler.RegisterRoutes(protected, middleware.MockAuth())
+
 		// Users
 		protected.GET("/users", handleListUsers)
 		protected.GET("/roles", handleListRoles)

@@ -3,6 +3,7 @@ import { lazy } from 'react';
 const DashboardPage = lazy(() => import('@/features/dashboard/DashboardPage'));
 const ServerListPage = lazy(() => import('@/features/servers/ServerListPage'));
 const ServerDetailPage = lazy(() => import('@/features/servers/ServerDetailPage'));
+const BatchCommandPage = lazy(() => import('@/features/servers/BatchCommandPage'));
 const DockerDashboardPage = lazy(() => import('@/features/docker/DockerDashboardPage'));
 const ModelListPage = lazy(() => import('@/features/ai/ModelListPage'));
 const AgentListPage = lazy(() => import('@/features/agents/AgentListPage'));
@@ -22,6 +23,7 @@ export interface RouteMeta {
 export const routeMeta: RouteMeta[] = [
     { path: '/', label: 'Dashboard', icon: 'dashboard' },
     { path: '/servers', label: 'Servers', icon: 'server' },
+    { path: '/servers/batch', label: 'Batch', icon: 'cluster' },
     { path: '/docker', label: 'Docker', icon: 'docker' },
     { path: '/models', label: 'AI Models', icon: 'apps' },
     { path: '/agents', label: 'Agents', icon: 'robot' },
@@ -36,6 +38,7 @@ export const routeMeta: RouteMeta[] = [
 export const routesConfig = [
     { path: '/', element: <DashboardPage /> },
     { path: '/servers', element: <ServerListPage /> },
+    { path: '/servers/batch', element: <BatchCommandPage /> },
     { path: '/servers/:id', element: <ServerDetailPage /> },
     { path: '/docker', element: <DockerDashboardPage /> },
     { path: '/models', element: <ModelListPage /> },

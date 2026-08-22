@@ -129,4 +129,20 @@ export const serverApi = {
 
     deleteGroup: (id: string) =>
         apiDelete<ApiResponse<null>>(`/server-groups/${id}`),
+
+    // Batch operations (Phase 7.2)
+    batchCommand: (data: { command: string; server_ids?: string[]; timeout_seconds?: number; group_id?: string }) =>
+        apiPost<ApiResponse<{ items: BatchResult[]; total: number }>>(`/servers/batch/command`, data),
 };
+
+export interface BatchResult {
+    server_id: string;
+    server: string;
+    host: string;
+    status: 'ok' | 'failed';
+    stdout: string;
+    stderr: string;
+    error?: string;
+    duration: string;
+    exit_code: number;
+}
