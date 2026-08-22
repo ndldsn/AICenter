@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/aicenter/aicenter/internal/auth"
+	"github.com/aicenter/aicenter/internal/permission"
 	"github.com/aicenter/aicenter/internal/pkg/crypto"
 )
 
@@ -18,6 +19,9 @@ func SeedData(db *sql.DB) error {
 		return err
 	}
 	if count > 0 {
+		// RBAC is stateless registry + idempotent DB inserts, so it must
+		// run every startup even when demo data is already present.
+		seedRBAC(db)
 		return nil
 	}
 
@@ -122,7 +126,78 @@ func SeedData(db *sql.DB) error {
 		}
 	}
 
+	// H2 batch 2: register permissions/groups and seed role permissions so
+	// RBAC is enabled out of the box. Idempotent: runs every startup.
+	seedRBAC(db)
+
 	return nil
+}
+
+func seedRBAC(db *sql.DB) {
+	reg := permission.RegistryInstance()
+
+	for _, p := range permission.Permissions() {
+		reg.RegisterPermission(p)
+	}
+	for _, g := range permission.Groups() {
+		reg.RegisterGroup(g)
+	}
+	for role, groups := range permission.DefaultRoleGrants() {
+		reg.RegisterDefaultGrants(role, groups)
+	}
+
+	// Ensure every default role row exists.
+	roleRows := []struct {
+		id, name, desc string
+	}{
+		{"role-superadmin", "superadmin", "Full access to everything"},
+		{"role-admin", "admin", "Administrator"},
+		{"role-operator", "operator", "Operator"},
+		{"role-viewer", "viewer", "Read-only viewer"},
+	}
+	for _, row := range roleRows {
+		_, _ = db.Exec(`
+			INSERT OR IGNORE INTO roles (id, name, description, is_system) VALUES (?, ?, ?, 1)
+		`, row.id, row.name, row.desc)
+	}
+
+	// Seed permissions rows and grant each role (except superadmin) its
+	// default permission names into role_permissions. superadmin stays
+	// implicit-all in the middleware.
+	for _, p := range permission.Permissions() {
+		_, _ = db.Exec(`
+			INSERT OR IGNORE INTO permissions (id, name, resource, action, group_id, group_name)
+			VALUES (?, ?, ?, ?, ?, ?)
+		`, p.ID, p.Name, p.Resource, p.Action, p.Group, p.Group)
+	}
+
+	roleID := map[string]string{
+		"admin":    "role-admin",
+		"operator": "role-operator",
+		"viewer":   "role-viewer",
+	}
+	for role := range permission.DefaultRoleGrants() {
+		rid, ok := roleID[role]
+		if !ok {
+			continue
+		}
+		tx, err := db.Begin()
+		if err != nil {
+			continue
+		}
+		granted := reg.GrantedPermissionsNames(role)
+		for _, permName := range granted {
+			_, err = tx.Exec(`
+				INSERT OR IGNORE INTO role_permissions (role_id, permission_id)
+				SELECT ?, id FROM permissions WHERE name = ?
+			`, rid, permName)
+			if err != nil {
+				tx.Rollback()
+				break
+			}
+		}
+		tx.Commit()
+	}
 }
 
 // seedDefaultAdmin ensures a default admin user exists with a real bcrypt hash.

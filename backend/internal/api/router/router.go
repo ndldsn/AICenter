@@ -169,9 +169,13 @@ func Setup(cfg *config.Config, db *sql.DB, hub *websocket.Hub, log *zap.Logger) 
 		batchHandler := handler.NewBatchHandler(service.NewBatchService())
 		batchHandler.RegisterRoutes(prot, middleware.JWTAuth(cfg.Auth.Secret))
 
-		// Users
-		prot.GET("/users", handleListUsers)
-		prot.GET("/roles", handleListRoles)
+		// Users (H2 batch 2 follow-up: real user CRUD; /users stays as a
+		// thin placeholder for now, behind roles.manage so it's gated).
+		prot.GET("/users", middleware.RequirePermission("roles.manage"), handleListUsers)
+
+		// Roles - real RBAC management endpoints (H2 batch 2).
+		rolesHandler := handler.NewRolesHandler(repository.NewRoleRepository(db))
+		rolesHandler.RegisterRoutes(prot, middleware.JWTAuth(cfg.Auth.Secret))
 
 		// Settings
 		prot.GET("/settings", handleGetSettings)
