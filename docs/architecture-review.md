@@ -101,7 +101,7 @@
 | 2 | H4 硬编码 JWT secret 修复 | ✅ commit `4e2f81a` |
 | 3 | H2 批1 交付（真实 JWT 认证 + bcrypt + login/register/refresh + 移除 MockAuth） | ✅ commit `f4bebd3` |
 | 4 | seed 默认 admin 假 hash bug 修复（改为动态 bcrypt，admin/Admin@123!） | ✅ 同上 |
-| 5 | H1 PostgreSQL 兼容（pgx 接入 + SQL 方言收敛 + 双库兼容迁移） | ✅ commit `987…` |
+| 5 | H1 PostgreSQL 兼容（pgx 接入 + SQL 方言收敛 + 双库兼容迁移） | ✅ commit `7bbccd1` |
 | 6 | 后续：H2 批2（RBAC 权限中间件 + /users /roles CRUD）/ H3 文档对齐 | ⏳ 待用户决策 |
 
 > 注：本环境无 Docker，无法实机启动 PostgreSQL 做端到端验证。H1 已完成代码层面的双库兼容
