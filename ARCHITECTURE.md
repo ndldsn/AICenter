@@ -10,7 +10,7 @@
 2. [系统模块图](#2-系统模块图)
 3. [前端目录结构](#3-前端目录结构)
 4. [Backend 目录结构](#4-backend-目录结构)
-5. [Agent 目录结构](#5-agent-目录结构)
+5. [控制面 Runtime 组件结构](#5-控制面-runtime-组件结构)
 6. [数据库 Schema](#6-数据库-schema)
 7. [REST API 设计](#7-rest-api-设计)
 8. [WebSocket 协议设计](#8-websocket-协议设计)
@@ -35,49 +35,62 @@
 
 ### 1.1 系统定位
 
-AICenter 是一个生产级的 AI 驱动统一运维控制平台，采用 **前后端分离 + Agent 边缘计算** 的三层架构。
+AICenter 是一个生产级的 AI 驱动统一运维控制平台，采用 **前后端分离 + 两层控制面** 架构：
+
+- **控制面（Control Plane）** — 后端 Go 进程内承载所有业务服务（API / WS / RBAC / Agent Runtime / Task / Monitor / Approval / Audit），Agent Runtime 作为**进程内组件**而非独立进程运行。
+- **被管节点（Managed Nodes）** — 通过 **SSH Bridge** 从控制面发起会话，执行命令 / Docker / 采集，不在节点侧常驻任何 AICenter 进程。
+
+架构选择参见 [ADR-001](#c-架构决策记录-adr)。
 
 ### 1.2 架构总览
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                        Browser (React SPA)                   │
-│   Dashboard │ Servers │ Docker │ Models │ Agents │ Tasks     │
+│   Dashboard │ Servers │ Docker │ Models │ Runtime │ Tasks   │
 └─────────────┴────────┴────────┴────────┴────────┴────────────┘
               │ REST API                    │ WebSocket
               ▼                             ▼
 ┌─────────────────────────────────────────────────────────────┐
-│                   Go Backend (API Gateway)                    │
-│  ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐           │
-│  │  Auth   │ │ Server  │ │ Docker  │ │   AI    │           │
-│  │ Service │ │ Service │ │ Service │ │ Service │           │
-│  └─────────┘ └─────────┘ └─────────┘ └─────────┘           │
-│  ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐           │
-│  │  Task   │ │  Audit  │ │ Approval│ │ Monitor │           │
-│  │ Service │ │ Service │ │ Service │ │ Service │           │
-│  └─────────┘ └─────────┘ └─────────┘ └─────────┘           │
+│         Go Backend  (Control Plane, single process)          │
+│  ┌──────────────────────────────────────────────────┐       │
+│  │                   API Layer                        │       │
+│  │  ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌────────┐ │       │
+│  │  │  Auth   │ │ Server  │ │ Docker  │ │   AI   │ │       │
+│  │  │ Service │ │ Service │ │ Service │ │Service │ │       │
+│  │  └─────────┘ └─────────┘ └─────────┘ └────────┘ │       │
+│  │  ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌────────┐ │       │
+│  │  │  Task   │ │  Audit  │ │Approval │ │Monitor │ │       │
+│  │  │ Service │ │ Service │ │ Service │ │Service │ │       │
+│  │  └─────────┘ └─────────┘ └─────────┘ └────────┘ │       │
+│  └──────────────────────────────────────────────────┘       │
 │                                                              │
 │  ┌──────────────────────────────────────────────────┐       │
-│  │              AI Provider Layer                     │       │
+│  │              AI Provider Layer (interface)         │       │
 │  │  OpenAI │ Anthropic │ Gemini │ DeepSeek │ Ollama   │       │
 │  └──────────────────────────────────────────────────┘       │
+│                                                              │
 │  ┌──────────────────────────────────────────────────┐       │
-│  │              Agent Runtime                         │       │
+│  │           Agent Runtime (进程内组件)                │       │
 │  │  Session │ Tool Executor │ Planner │ Approval     │       │
+│  │  + Tool 注册中心 + Tool Permission 检查              │       │
 │  └──────────────────────────────────────────────────┘       │
-└─────────────────────────────────────────────────────────────┘
-              │                    │
-              │ WebSocket / gRPC   │ WebSocket / gRPC
-              ▼                    ▼
-┌──────────────────┐    ┌──────────────────┐
-│   Agent (Node1)  │    │   Agent (Node2)  │
-│  ┌────────────┐  │    │  ┌────────────┐  │
-│  │ Collector  │  │    │  │ Collector  │  │
-│  │ Executor   │  │    │  │ Executor   │  │
-│  │ Monitor    │  │    │  │ Monitor    │  │
-│  │ Heartbeat  │  │    │  │ Heartbeat  │  │
-│  └────────────┘  │    │  └────────────┘  │
-└──────────────────┘    └──────────────────┘
+│                                                              │
+│  ┌──────────────────────────────────────────────────┐       │
+│  │              SSH Bridge (Server Executor)          │       │
+│  │  SSH Session 管理 │ 命令执行 │ Docker SDK │ 指标采集  │       │
+│  └──────────────────────────────────────────────────┘       │
+└───────────────────────────────┬─────────────────────────────┘
+                                │ SSH (SSH-2, 密钥认证 + 权限校验)
+                                │
+              ┌─────────────────┼─────────────────────┐
+              │                 │                     │
+         ┌────▼─────┐     ┌────▼─────┐        ┌────▼─────┐
+         │ Node 001 │     │ Node 002 │        │ Node 00N │
+         │ (无常驻   │     │ (无常驻   │        │ (无常驻   │
+         │  AICenter│     │  AICenter│        │  AICenter│
+         │  进程)   │     │ 进程)    │        │  进程)   │
+         └──────────┘     └──────────┘        └──────────┘
 ```
 
 ### 1.3 分层说明
@@ -85,22 +98,24 @@ AICenter 是一个生产级的 AI 驱动统一运维控制平台，采用 **前�
 | 层级 | 职责 | 技术 |
 |------|------|------|
 | 展示层 | 用户界面、数据可视化、交互 | React + Arco Design + ECharts |
-| 网关层 | 认证、路由、限流、审计 | Go + Gin/Echo |
-| 服务层 | 业务逻辑编排 | Go Services |
-| AI 层 | Provider 抽象、Agent 运行、Tool 执行 | Go + Provider SDKs |
-| 边缘层 | 服务器本地采集、命令执行、Docker 管理 | Go Agent |
-| 数据层 | 持久化、缓存、消息队列 | PostgreSQL + Redis + NATS |
+| 网关层 | 认证、路由、限流、审计、WS 网关 | Go + Gin |
+| 服务层 | 业务逻辑编排（API / Task / Monitor / Approval / Audit） | Go Services |
+| AI 层 | Provider 抽象（OpenAI/Anthropic/.../Ollama） | Go + Provider SDKs |
+| Runtime 层 | Agent Runtime（Session / Tool Executor / Planner / Approval / Tool 注册中心） — **进程内组件** | Go（backend/internal/runtime） |
+| 执行层 | SSH Bridge：通过 SSH 对被管节点执行命令 / Docker / 采集（不在节点侧常驻） | Go（backend/internal/executor + Go SSH lib） |
+| 数据层 | 持久化、缓存 | SQLite(开发) + PostgreSQL(生产) |
 
 ### 1.4 关键架构决策
 
 | 决策项 | 选择 | 理由 |
 |--------|------|------|
-| 前后端通信 | REST + WebSocket | REST 用于 CRUD，WS 用于实时推送 |
-| Agent 通信 | WebSocket (主) + gRPC (备) | WS 兼容性好，穿透 NAT 容易 |
-| 数据库 | SQLite(开发) + PostgreSQL(生产) | 开发简单，生产可靠 |
-| 缓存 | Redis | 会话、实时数据、分布式锁 |
-| 认证 | JWT + Refresh Token | 无状态，易于扩展 |
-| 消息 | Redis Pub/Sub → NATS | 初期简单，后期可替换 |
+| 前后端通信 | REST + WebSocket | REST 用于 CRUD，WS 用于实时推送（Agent 会话、审批事件、指标流） |
+| Agent 架构 | **进程内 Runtime（见 ADR-001）** | 降低部署面、消除 Agent 进程间一致性问题，把复杂度收到控制面 |
+| 节点通信 | **SSH Bridge（自控制面发起）** | 节点侧无常驻进程，天然符合"默认只读、高危操作走审批"原则 |
+| 数据库 | SQLite(开发) + PostgreSQL(生产) | 开发简单，生产可靠（dual-driver 已落地） |
+| 缓存 | Redis | 会话、实时数据、分布式锁（可选；MVP 可省） |
+| 认证 | JWT + Refresh Token + RBAC | 无状态，权限基于角色 → 权限组 → 权限链 |
+| 消息 | 内存通道 + WS（MVP）；可选 Redis Pub/Sub | 单控制面进程内无需外部 MQ；多实例时再升级 |
 
 ---
 
@@ -127,9 +142,23 @@ AICenter 是一个生产级的 AI 驱动统一运维控制平台，采用 **前�
    └────┬───┘ └────┬───┘ └────┬───┘ └────┬───┘ └────┬───┘
         │          │          │          │          │
    ┌────▼───┐ ┌────▼───┐ ┌─────▼──┐ ┌─────▼──┐ ┌─────▼──┐
-   │ Audit  │ │Approval│ │Monitor │ │ Agent  │ │Notification│
+   │ Audit  │ │Approval│ │Monitor │ │Runtime │ │Notification│
    │Module  │ │Module  │ │Module  │ │Module  │ │Module     │
-   └────────┘ └────────┘ └────────┘ └────────┘ └────────────┘
+   └────┬───┘ └────┬───┘ └────┬───┘ └────┬───┘ └────────┬─┘
+        │          │          │          │               │
+        │    ┌─────▼──────────▼──────────▼───────────────┘
+        │    │
+   ┌────▼────▼──────────────────────────────────────┐
+   │               SSH Bridge Layer                  │
+   │  Session 池 │ 命令执行 │ Docker SDK │ 指标采集    │
+   └────────────┬───────────────────────────────────┘
+                │ SSH（控制面发起，节点侧无常驻进程）
+        ┌───────┼──────────────┐
+        │       │              │
+   ┌────▼───┐ ┌▼─────┐ ┌─────▼───┐
+   │ Node A │ │Node B│ │ Node C  │
+   │(无常驻) │ │(无常驻│ │(无常驻)  │
+   └────────┘ └──────┘ └─────────┘
 ```
 
 ### 模块职责
@@ -143,8 +172,9 @@ AICenter 是一个生产级的 AI 驱动统一运维控制平台，采用 **前�
 | Task | 任务调度、执行、历史 | Task, TaskStep, ExecutionLog |
 | Audit | 操作审计、合规 | AuditLog |
 | Approval | 审批流程、Dry Run | ApprovalRequest, ExecutionPlan |
-| Monitor | 指标采集、告警 | Metric, AlertRule, AlertEvent |
-| Agent | Agent 会话、消息、执行 | AgentSession, AgentMessage |
+| Monitor | 指标采集（via SSH）、告警 | Metric, AlertRule, AlertEvent |
+| **Runtime** | Agent Runtime（进程内组件）：会话、消息、Tool 注册、执行、Planner | AgentSession, AgentMessage, Tool, ToolRegistry |
+| **SSH Bridge** | 通过 SSH 对被管节点执行命令 / Docker / 采集（进程内执行层） | SSHSession, SSHExecResult |
 | Notification | 通知渠道 | NotificationChannel |
 
 ---
@@ -650,77 +680,96 @@ backend/
 
 ---
 
-## 5. Agent 目录结构
+## 5. 控制面 Runtime 组件结构
+
+Agent 不再部署为被管节点上的独立进程，而是作为 **控制面 Go 进程内的 Runtime 组件** 运行。运行时与 SSH Bridge 之间通过 Go 接口解耦：Runtime 发起执行意图 → Bridge 通过 SSH 投递到目标节点 → 结果回喂 Runtime。
 
 ```
-agent/                                    # 每个被管理服务器上运行的轻量 Agent
-├── cmd/agent/
-│   └── main.go
-├── internal/
-│   ├── agent/
-│   │   ├── agent.go                      # Agent 主控
-│   │   ├── config.go
-│   │   └── lifecycle.go
-│   │
-│   ├── collector/                        # 数据采集
-│   │   ├── system.go                     # CPU/内存/磁盘/网络
-│   │   ├── process.go                    # 进程信息
-│   │   ├── docker.go                     # Docker 状态
-│   │   └── network.go                    # 网络信息
-│   │
-│   ├── executor/                         # 命令执行（受控）
-│   │   ├── executor.go                   # 执行器接口
-│   │   ├── shell.go                      # Shell 命令执行
-│   │   ├── docker.go                     # Docker 操作
-│   │   └── sandbox.go                    # 沙箱执行（可选）
-│   │
-│   ├── monitor/                          # 本地监控
-│   │   ├── monitor.go                    # 监控循环
-│   │   └── health.go                     # 自检
-│   │
-│   ├── heartbeat/                        # 与 Backend 通信
-│   │   ├── heartbeat.go                  # 心跳
-│   │   ├── register.go                   # 注册到 Backend
-│   │   └── command.go                    # 接收 Backend 命令
-│   │
-│   └── proto/                            # 通信协议
-│       ├── message.go                    # 消息类型
-│       └── codec.go                      # 编解码
+backend/internal/runtime/
+├── runtime.go                  # Runtime 主控：启动、生命周期、会话路由
+├── session/
+│   ├── session.go              # AgentSession 生命周期
+│   ├── message.go              # AgentMessage（用户输入 / 助手输出 / tool_call / tool_result）
+│   └── stream.go               # 结果流（对接 WS Hub 推送）
 │
-└── config.yaml.example
+├── planner/
+│   ├── planner.go              # 思考-行动循环（Planner）
+│   └── policy.go               # 策略：只读优先、禁止直接 shell、默认走审批
+│
+├── tool/
+│   ├── registry.go             # Tool 注册中心（含 group/permission）
+│   ├── definitions.go          # 22+ Tool 定义
+│   ├── tool.go                 # Tool 接口 + 执行器
+│   ├── execute.go              # 执行编排（含权限检查 + Approval 钩子）
+│   ├── sandbox.go              # 沙箱执行策略（可选）
+│   └── builtin/
+│       ├── shell.go            # Shell Tool（默认 DENY，需审批）
+│       ├── docker.go           # Docker Tool（读取 SDK）
+│       ├── k8s.go              # K8s Tool
+│       ├── server.go           # 服务器读取/操作
+│       ├── file.go             # 文件读写
+│       └── net.go              # 网络探测
+│
+├── approval/
+│   └── hook.go                 # 与 Approval Service 的对接（Dry Run / 需审批）
+│
+└── executor/                   # 进程内执行层（对节点的操作入口）
+    ├── executor.go             # Executor 接口
+    ├── ssh.go                  # SSH Bridge：session 池 + 命令执行 + 上传下载
+    ├── docker.go               # Docker SDK 调用（远端 node 通过 SSH 隧道）
+    └── collector.go            # 指标采集（通过 SSH 执行采集命令）
 ```
 
-### Agent 部署方式
+### 5.1 Runtime 与 SSH Bridge 协作
 
-```yaml
-# config.yaml
-server:
-  id: "node-001"                          # 唯一标识
-  name: "生产服务器 01"
-  group: "production"
-
-backend:
-  url: "wss://aicenter.example.com"
-  token: "agent-registration-token"
-
-heartbeat:
-  interval: 30s
-  timeout: 10s
-
-collector:
-  interval: 15s                           # 指标采集间隔
-  metrics:
-    - cpu
-    - memory
-    - disk
-    - network
-    - docker
-
-security:
-  allow_shell: false                      # 默认禁止 Shell
-  allow_commands: []                      # 允许的命令白名单
-  docker_socket: "/var/run/docker.sock"
 ```
+用户发起操作 / Agent 决定动作
+        │
+        ▼
+┌──────────────────────────────┐
+│  Agent Runtime (进程内)       │
+│  - 权限检查 (RequirePermission)│
+│  - Approval 钩子（若需审批）   │
+│  - 拼装 Tool 参数             │
+└──────────────┬───────────────┘
+               │
+               ▼
+┌──────────────────────────────┐
+│  SSH Bridge (进程内执行层)     │
+│  - 从 Server DB 取 SSH 凭据   │
+│  - 复用 SSH Session 池        │
+│  - 执行命令 / 调 Docker SDK  │
+│  - 采集指标（如 uname / df）  │
+└──────────────┬───────────────┘
+               │ SSH（自控制面发起）
+               ▼
+        ┌──────────────┐
+        │  被管节点     │
+        │  (无常驻进程) │
+        └──────┬───────┘
+               │
+               ▼
+        结果回喂 Runtime
+```
+
+### 5.2 Runtime 设计原则
+
+| 原则 | 说明 |
+|------|------|
+| 默认只读 | Runtime 所有 Tool 默认为 READ，写操作必须走 Approval |
+| 禁止直接 shell | LLM 不能直接生成 shell 命令执行，必须通过 Tool → Permission → Risk Assessment → Approval → Execution → Verification |
+| 进程内 | Runtime 是 Go 进程内组件，无独立二进制部署，跟随 control plane 启动/升级 |
+| 可观测 | 每次 Tool 调用写入 AuditLog，含 tool、参数、结果、审批状态 |
+| 可扩展 | Tool 通过 registry 注册，新增 Tool 只需加定义 + 权限项 |
+
+### 5.3 SSH Bridge 设计要点
+
+- **凭据存储**：SSH 密钥 / 密码存于 `servers.ssh_private_key`（AES-GCM 加密），控制面启动时按需提供
+- **Session 池**：每个 Server 维护一个 SSH Session 复用池，避免每次命令都握手
+- **心跳/健康检测**：Monitor 每 30s 通过 SSH 执行 `uptime` / `df` 采集，非节点侧心跳
+- **超时与失败**：单命令 60s 超时；节点不可达时 Server 状态置为 `offline`，不重试风暴
+- **审计**：每条命令的 stdin / stdout / stderr 全部入 AuditLog（敏感值脱敏）
+- **安全**：不缓存明文密钥；禁止交互式 shell；所有写操作需 Approval
 
 ---
 
@@ -2273,53 +2322,62 @@ audit:
 
 ### 14.1 架构
 
+被管节点**无常驻 AICenter 进程**。控制面维护 `servers` 表（含 SSH 凭据），需要操作节点时通过 **SSH Bridge** 主动发起连接。
+
 ```
                     ┌──────────────┐
                     │   Backend    │
-                    │  (API + WS)  │
+                    │ (Control P.) │
                     └──────┬───────┘
                            │
-          ┌────────────────┼────────────────┐
-          │                │                │
-    ┌─────▼─────┐   ┌─────▼─────┐   ┌─────▼─────┐
-    │  Agent    │   │  Agent    │   │  Agent    │
-    │ (Node A)  │   │ (Node B)  │   │ (Node C)  │
-    │           │   │           │   │           │
-    │ Collector │   │ Collector │   │ Collector │
-    │ Executor  │   │ Executor  │   │ Executor  │
-    │ Monitor   │   │ Monitor   │   │ Monitor   │
-    └───────────┘   └───────────┘   └───────────┘
+                    ┌──────▼───────┐
+                    │ SSH Bridge   │
+                    │ 控制面进程内  │
+                    └──────┬───────┘
+                           │ SSH (控制面发起)
+              ┌────────────┼──────────────┐
+              │            │              │
+         ┌────▼─────┐ ┌───▼────┐ ┌───────▼───────┐
+         │ Node A   │ │ Node B │ │ Node C        │
+         │(无常驻)   │ │(无常驻) │ │(无常驻)        │
+         └──────────┘ └────────┘ └───────────────┘
 ```
 
-### 14.2 Agent 注册流程
+### 14.2 服务器注册流程
 
 ```
-1. 用户在 AICenter 添加服务器
-2. AICenter 生成 Agent Token
-3. 用户在被管理服务器上安装 Agent
-4. Agent 启动，使用 Token 向 Backend 注册
-5. Backend 验证 Token，建立 WebSocket 连接
-6. Agent 开始发送心跳和指标
-7. Backend 更新服务器状态为 online
+1. 用户在 AICenter 添加服务器，填入 SSH 信息（Host / Port / 用户 / 密钥或密码）
+2. Backend 校验 SSH 连通性（执行 ssh user@host 'echo OK'）
+3. 校验通过后，SSH 凭据经 AES-GCM 加密写入 servers 表
+4. Server 状态置为 online，开始被 Monitor 通过 SSH 采集指标
 ```
 
-### 14.3 Agent 通信协议
+### 14.3 SSH Bridge 通信
 
 ```go
-// Agent → Backend
-type AgentMessage struct {
-    Type      string          // "heartbeat", "metric", "log", "event", "result"
-    Timestamp time.Time
-    ServerID  string
-    Data      json.RawMessage
+// Server（被管节点）模型 —— 凭据加密存储
+type Server struct {
+    ID                 string
+    Name               string
+    Host               string
+    Port               int
+    User               string
+    SSHPrivateKeyEnc   []byte   // AES-GCM 加密后的私钥
+    SSHPassphraseEnc   []byte   // 可选
+    Status             string   // online | offline | unknown
+    LastSeenAt         *time.Time
+    CreatedAt, UpdatedAt time.Time
 }
 
-// Backend → Agent
-type BackendCommand struct {
-    ID        string
-    Type      string          // "collect", "execute", "docker", "config"
-    Timestamp time.Time
-    Data      json.RawMessage
+// Bridge 执行结果
+type SSHExecResult struct {
+    ServerID    string
+    Command     string
+    ExitCode    int
+    Stdout      string
+    Stderr      string
+    Duration    time.Duration
+    AuditLogID  string
 }
 ```
 
@@ -2758,31 +2816,28 @@ volumes:
   app-data:
 ```
 
-### 18.3 Agent 部署
+### 18.3 节点接入方式
+
+被管节点**不部署任何 AICenter 进程**。接入方式仅为 SSH 凭据注册：
 
 ```bash
-# 方式 1: 直接下载二进制
-curl -sL https://aicenter.example.com/install-agent.sh | bash -s -- \
-  --server-id node-001 \
-  --backend wss://aicenter.example.com \
-  --token <agent-token>
+# 1. 在控制面 UI/API 上添加服务器
+curl -X POST https://aicenter.example.com/api/v1/servers \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "name": "node-001",
+    "host": "10.0.0.1",
+    "port": 22,
+    "user": "deploy",
+    "ssh_private_key": "<ENCRYPTED-SHELL>"
+  }'
 
-# 方式 2: Docker
-docker run -d \
-  --name aicenter-agent \
-  --restart always \
-  -v /var/run/docker.sock:/var/run/docker.sock \
-  -e AICENTER_SERVER_ID=node-001 \
-  -e AICENTER_BACKEND_URL=wss://aicenter.example.com \
-  -e AICENTER_TOKEN=<agent-token> \
-  aicenter/agent:latest
-
-# 方式 3: Systemd
-sudo aicenter-agent install \
-  --server-id node-001 \
-  --backend wss://aicenter.example.com \
-  --token <agent-token>
+# 2. 控制面自动执行 SSH 连通性校验
+# 3. 成功后节点状态=online，Monitor 开始通过 SSH 采集指标
 ```
+
+> 备注：被管节点只需开放 22/TCP 端口，无需安装 Agent、无需 systemd 服务、无需 Docker。
 
 ### 18.4 部署拓扑
 
@@ -2810,7 +2865,8 @@ sudo aicenter-agent install \
         │             │             │
   ┌─────▼─────┐ ┌────▼──────┐ ┌────▼──────┐
   │  Backend  │ │  Backend  │ │  Backend  │
-  │  (API 1)  │ │  (API 2)  │ │  (API 3)  │
+  │  (API+Runtime│ │(API+Runtime│ │(API+Runtime│
+  │   单实例)   │ │  单实例)  │ │  单实例)  │
   └─────┬─────┘ └────┬──────┘ └────┬──────┘
         │             │             │
         └─────────────┼─────────────┘
@@ -2818,10 +2874,20 @@ sudo aicenter-agent install \
         ┌─────────────┼─────────────┐
         │             │             │
   ┌─────▼─────┐ ┌────▼──────┐ ┌────▼──────┐
-  │ PostgreSQL│ │   Redis   │ │   NATS    │
-  │ (Primary) │ │ (Cluster) │ │ (Cluster) │
+  │ PostgreSQL│ │   Redis   │ │  (可选)   │
+  │ (Primary) │ │ (Cache)   │ │  Pub/Sub  │
   └───────────┘ └───────────┘ └───────────┘
+                      │
+                      │ SSH (控制面发起)
+         ┌────────────┼──────────────────────┐
+         │            │                      │
+    ┌────▼─────┐ ┌───▼────┐        ┌───────▼───────┐
+    │ Node 001 │ │Node 002│        │ Node 00N      │
+    │(无常驻)   │ │(无常驻) │        │(无常驻)        │
+    └──────────┘ └────────┘        └───────────────┘
 ```
+
+> 生产部署建议 Backend 至少 2 实例；SSH 凭据解密后的明文密钥只在内存中存在，不写入日志/DB。
 
 ---
 
@@ -2930,29 +2996,33 @@ sudo aicenter-agent install \
    └── 流式输出展示
 ```
 
-### Phase 5: Agent 系统 (3-4 周)
+### Phase 5: Runtime 系统 (3-4 周)
 
 ```
-目标: 实现 AI Agent，支持 Tool 调用和审批
+目标: 在控制面进程内实现 Agent Runtime（思考-行动循环 + Tool 调用 +
+     审批），并通过 SSH Bridge 把执行能力扩展到被管节点。
 
 5.1 Backend
-   ├── Agent CRUD
-   ├── Agent Session 管理
-   ├── Tool 注册框架
-   ├── 只读 Tool 实现
-   ├── Agent Loop (思考-行动循环)
-   ├── 审批系统
-   ├── Dry Run
-   ├── 受控执行器
+   ├── Runtime CRUD（Agent 配置、模型、system prompt）
+   ├── Runtime Session 管理
+   ├── Tool 注册框架（Read-only / Approve / Deny 分类）
+   ├── Runtime Loop（思考-行动循环，进程内）
+   ├── SSH Bridge 接口 + 实现（密钥管理、通道复用）
+   ├── 受控执行器（risk + approval gate）
    └── Audit Log
 
 5.2 Frontend
-   ├── Agent 配置页面
-   ├── Agent 对话界面
-   ├── Tool 调用展示
-   ├── 审批界面
+   ├── Runtime 配置页面
+   ├── 对话界面（会话 / 消息 / Tool 步骤可视化）
    ├── 执行计划展示
+   ├── 审批界面
    └── Audit Log 查看
+
+5.3 关键设计决策
+   ├── Agent 进程内化（ADR-001）：无边缘 Agent 进程
+   ├── Tool 分层：只读直出 / 写前校验 / 高风险拒绝
+   ├── 远程执行：SSH Bridge 通道复用，按 operation-id 聚合输出
+   └── 审批事件：WebSocket 从控制面推送，前端弹窗
 ```
 
 ### Phase 6: 任务与监控 (2-3 周)
@@ -3037,11 +3107,12 @@ sudo aicenter-agent install \
 
 ## 20. 后续迭代路线
 
-### V1.1 - 增强 Agent
-- [ ] Agent 记忆系统 (长期记忆)
-- [ ] Agent 协作 (多 Agent 协同)
-- [ ] Agent 技能市场 (共享 Tool)
+### V1.1 - 增强 Runtime
+- [ ] Runtime 记忆系统 (长期记忆)
+- [ ] Runtime 协作 (多 Agent 协同)
+- [ ] Runtime 技能市场 (共享 Tool)
 - [ ] Prompt 模板库
+- [ ] 边缘 SSH Bridge 通道复用优化
 
 ### V1.2 - 增强运维
 - [ ] Web Terminal (xterm.js)
@@ -3071,9 +3142,10 @@ sudo aicenter-agent install \
 ### V2.0 - 平台化
 - [ ] 插件系统
 - [ ] 开放 API
-[ ] 多租户
+- [ ] 多租户
 - [ ] 移动端
 - [ ] 桌面端 (Electron)
+- [ ] 边缘节点进程内 Agent（见 ADR-001；MVP 暂不做，V2.0 再评估）
 
 ---
 
@@ -3097,7 +3169,7 @@ sudo aicenter-agent install \
 | 多 Provider 兼容 | 各 Provider Tool 格式不同 | 统一适配层、充分测试 |
 | 实时性 | 大量 WebSocket 连接和指标推送 | 连接池、消息压缩、采样降级 |
 | 审批延迟 | 人工审批阻塞自动化 | 可配置审批策略、超时自动处理 |
-| 跨版本兼容 | Agent 与 Backend 版本不一致 | 版本协商、向后兼容 |
+| 跨版本兼容 | SSH Bridge 与远端工具链版本不一致 | 通道级能力协商、特性降级、版本上报 |
 | 大规模监控 | 多服务器高频指标采集 | 边缘聚合、采样、TSDB |
 | 会话状态恢复 | Agent 会话中断后恢复 | 持久化上下文、断点续传 |
 
@@ -3143,7 +3215,7 @@ sudo aicenter-agent install \
 | 前端框架 | React | Vue, Sango | 生态好、Arco Design 支持 |
 | UI 库 | Arco Design | Ant Design, Material | 更现代、TS 支持好 |
 | 状态管理 | Zustand | Redux, MobX | 轻量、TS 友好 |
-| Agent 部署 | 独立进程 | Sidecar, DaemonSet | 简单、兼容性好 |
+| Agent 部署 | **进程内 Runtime + SSH Bridge** | 独立边缘 Agent 进程、Sidecar、DaemonSet | 降低部署面（节点零常驻）、消除 Agent 进程升级/状态一致性问题；节点只需 SSH |
 | 认证 | JWT | Session, OAuth | 无状态、易扩展 |
 | 配置格式 | YAML | JSON, TOML | 可读性好、支持注释 |
 
@@ -3153,7 +3225,7 @@ sudo aicenter-agent install \
 |------|--------|--------|------|
 | 时序数据 | PostgreSQL + 分区 | TimescaleDB / InfluxDB | 初期用 PG，后期迁移 |
 | 消息队列 | Redis Pub/Sub | NATS / RabbitMQ | 初期用 Redis，后期可换 |
-| Agent 通信 | WebSocket | gRPC | 建议 WebSocket (穿透好) |
+| Agent 通信 | SSH（控制面发起） | WebSocket Agent、gRPC Agent、节点常驻 Agent | SSH 是节点侧已存在的能力，无需额外部署；配合密钥管理天然安全 |
 | 监控存储 | 自建 | Prometheus + Grafana | 建议自建 (统一体验) |
 | 日志收集 | 自建 | ELK / Loki | 建议自建 (简化架构) |
 | 前端图表 | ECharts | D3.js, Chart.js | 建议 ECharts (功能全) |
@@ -3213,35 +3285,69 @@ AI_Server_Center/
 │
 ├── backend/                 # Go 后端
 │   ├── cmd/
+│   │   └── aicenter/        # 主入口
 │   ├── internal/
-│   ├── pkg/
-│   ├── migrations/
-│   ├── configs/
-│   ├── deployments/
-│   └── scripts/
+│   │   ├── api/             # Gin 路由、handler、middleware
+│   │   │   ├── handler/
+│   │   │   ├── middleware/
+│   │   │   └── router/
+│   │   ├── database/        # 连接、迁移、seed
+│   │   ├── models/          # 领域模型
+│   │   ├── repository/      # 数据访问（server/provider/role/user 等）
+│   │   ├── service/         # 业务逻辑（Server/AI/Auth/User 等）
+│   │   ├── permission/      # RBAC 权限注册中心
+│   │   ├── monitor/         # 指标采集、存储、告警
+│   │   ├── task/            # 任务调度、执行、工作池
+│   │   ├── approval/        # 审批、Dry Run、受控执行器
+│   │   ├── websocket/       # WS Hub
+│   │   └── runtime/         # Agent Runtime（进程内：Loop + Tool + Session）
+│   ├── pkg/                 # 内部共享（crypto/ssh/docker/utils/logger）
+│   ├── migrations/          # SQL 迁移
+│   └── configs/             # 环境配置
 │
 ├── frontend/                # React 前端
 │   ├── src/
 │   ├── public/
 │   └── ...
-│
-├── agent/                   # 边缘 Agent
-│   ├── cmd/
-│   ├── internal/
-│   └── ...
-│
-├── docs/                    # 文档
-│   ├── api.md
-│   ├── user-guide.md
-│   └── deployment.md
-│
-└── deployments/             # 部署配置
-    ├── docker-compose.yml
-    ├── docker-compose.dev.yml
-    ├── k8s/
-    └── terraform/
-```
+
+### C. 架构决策记录 (ADR)
+
+#### ADR-001: Agent 部署形态 — 进程内 Runtime + SSH Bridge
+
+**状态**: Accepted · 2026-08-22
+
+**背景**
+AICenter 需要把 LLM 的"思考-行动循环"（Runtime）与"在远端节点执行命令"（Docker API / Shell）解耦。
+Runtime 本身是 CPU/内存密集的应用逻辑；节点执行依赖 Docker Socket 或 SSH。
+
+**备选方案**
+
+| 方案 | 描述 | 优点 | 缺点 |
+|------|------|------|------|
+| A. 边缘独立 Agent 进程 | 每个被管节点跑一个常驻 AICenter-agent，与 Backend WS 长连 | 节点本地上下文强；可批量分发；离线也能缓存 | 部署面翻倍（N 节点 = N+1 进程要运维）；升级/配置不一致；心跳/探活/自愈工程量大 |
+| B. 进程内 Runtime + SSH Bridge（本次选择）| Runtime 作为控制面 Go 进程的组件；控制面通过 SSH 主动发起连接 | 单一进程、无 Agent 部署面；版本强一致；密钥由控制面统一管理 | 控制面并发受限于进程；远端命令延迟含 SSH 握手开销；控制面成单点 |
+| C. Sidecar / DaemonSet | Agent 作为容器 Sidecar 或 K8s DaemonSet | 编排原生、自动扩缩 | 绑定 K8s；小团队运维成本不划算 |
+| D. 纯 Pull API | 节点提供 API，Backend 轮询 | 无常驻依赖 | 暴露面扩大；安全边界弱 |
+
+**决策**
+采用 **B** 作为 MVP（V1.0–V1.5）；**A** 留到 V2.0 再评估（当节点数 > 数百、网络分区场景明确时）。
+
+**理由**
+1. MVP 的节点规模通常在个位到数十台，进程内方案工程成本远低于独立 Agent 集群的部署/升级/探活开销。
+2. 消除 Agent 与 Backend 版本不一致这一类跨版本兼容风险。
+3. 密钥、审计、审批、Token 全在控制面同一内存边界，攻击面更可控。
+4. 边缘 SSH 已存在，节点零部署成本。
+
+**后果**
+- ✅ 正面：部署面 -1、密钥集中、审计完整、无 Agent 探活/自愈代码
+- ⚠️ 负向：控制面成单点（V1.5 起可水平扩展 Backend + Redis 共享 Session）；远端命令延迟含 SSH 握手（用通道复用缓解）
+- 未来如节点数 > 500 或需要弱网容忍，需回切方案 A
+
+**相关引用**
+- `backend/internal/runtime/` — Runtime 组件目录（待实现）
+- `backend/internal/pkg/ssh/` — SSH Bridge 封装
+- `backend/internal/database/migrations/009_rbac.up.sql` — 权限/角色表
 
 ---
 
-> 文档结束。此架构设计涵盖了 AICenter 项目的完整技术方案，可作为后续开发的蓝图。建议在正式开发前，对关键模块（Agent Runtime、审批系统、安全模型）进行详细设计和评审。
+> 文档结束。此架构设计涵盖了 AICenter 项目的完整技术方案，可作为后续开发的蓝图。建议在正式开发前，对关键模块（Runtime、审批系统、安全模型）进行详细设计和评审。
