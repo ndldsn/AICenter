@@ -43,18 +43,29 @@ func NewFactory() *Factory { return &Factory{} }
 func (f *Factory) Build(p ProviderType, cfg Config) Client {
 	var c Client
 	switch p {
-	case ProviderOpenAICompatible:
-		c = NewOpenAICompatClient(cfg)
+	case ProviderDeepSeek, ProviderOllama:
+		// DeepSeek (api.deepseek.com) and Ollama (/v1/) are both
+		// OpenAI-compatible endpoints. Reuse the shared client and
+		// override the base URL when the caller did not specify one.
+		ocfg := cfg
+		if ocfg.BaseURL == "" {
+			switch p {
+			case ProviderDeepSeek:
+				ocfg.BaseURL = "https://api.deepseek.com"
+			case ProviderOllama:
+				ocfg.BaseURL = "http://localhost:11434/v1"
+			}
+		}
+		c = NewOpenAICompatClient(ocfg)
 	case ProviderAnthropic:
 		c = NewAnthropicClient(cfg)
+	case ProviderGemini:
+		c = NewGeminiClient(cfg)
 	case ProviderMock:
 		c = &MockClient{}
 	default:
-		// Gemini and any unknown type fall back to mock-ish behaviour so
-		// seed data does not break the app.
 		c = &fallbackClient{cfg: cfg, kind: p}
 	}
-	// Wrap every client with a per-provider concurrency limiter.
 	return NewLimited(c, DefaultProviderConcurrency)
 }
 

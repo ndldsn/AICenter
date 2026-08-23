@@ -147,7 +147,6 @@ func (s *AgentService) SendToSession(sessionID string, userMessage string, userI
 					Metadata: jsonMarshal(map[string]any{"turn": i}),
 				})
 				result.RequiresApproval = true
-				// Phase 7: notify approval.requested
 				if s.notify != nil {
 					data := map[string]string{
 						"approval_id": approv.ID,
@@ -228,8 +227,13 @@ func (s *AgentService) Approve(approvalID, approvedBy string) error {
 	}
 	s.approvalQ.Resolve(approvalID, models.ApprovalApproved)
 	if s.notify != nil {
-		s.notify("approval.resolved", "审批已通过: "+approvalID, "info", "审批请求 "+approvalID+" 已被批准。",
-			map[string]string{"approval_id": approvalID, "result": "approved", "by": approvedBy})
+		s.notify("approval.resolved", "审批已通过: "+approvalID, "info",
+			"审批请求 "+approvalID+" 已被批准。",
+			map[string]string{
+				"approval_id": approvalID,
+				"result":      "approved",
+				"by":          approvedBy,
+			})
 	}
 	return nil
 }
@@ -240,7 +244,8 @@ func (s *AgentService) Reject(approvalID string) error {
 	}
 	s.approvalQ.Resolve(approvalID, models.ApprovalRejected)
 	if s.notify != nil {
-		s.notify("approval.resolved", "审批已拒绝: "+approvalID, "info", "审批请求 "+approvalID+" 已被拒绝。",
+		s.notify("approval.resolved", "审批已拒绝: "+approvalID, "info",
+			"审批请求 "+approvalID+" 已被拒绝。",
 			map[string]string{"approval_id": approvalID, "result": "rejected"})
 	}
 	return nil
@@ -256,6 +261,46 @@ func (s *AgentService) GetApproval(id string) (*models.ApprovalRequest, error) {
 
 func (s *AgentService) ListAudit(limit, offset int) ([]repository.AuditEntry, error) {
 	return s.auditRepo.List(limit, offset)
+}
+
+func (s *AgentService) ToolRegistry() *tools.Registry { return s.toolReg }
+
+func (s *AgentService) CreateApproval(req *models.ApprovalRequest) error {
+	return s.approvalRepo.Create(req)
+}
+
+// AppendMessageReq captures the minimal fields needed to append a message.
+type AppendMessageReq struct {
+	SessionID  string
+	Role       string
+	Content    string
+	ToolName   string
+	ToolArgs   json.RawMessage
+	ToolResult any
+	Metadata   map[string]any
+}
+
+func (s *AgentService) AppendMessage(req *AppendMessageReq) {
+	if req == nil || strings.TrimSpace(req.SessionID) == "" {
+		return
+	}
+	_ = s.msgRepo.Append(&models.AgentMessage{
+		SessionID:  req.SessionID,
+		Role:       req.Role,
+		Content:    req.Content,
+		ToolName:   req.ToolName,
+		ToolArgs:   toRaw(req.ToolArgs),
+		ToolResult: toRaw(req.ToolResult),
+		Metadata:   toRaw(req.Metadata),
+	})
+}
+
+func toRaw(v any) json.RawMessage {
+	if v == nil {
+		return nil
+	}
+	b, _ := json.Marshal(v)
+	return b
 }
 
 func titleFrom(q string) string {

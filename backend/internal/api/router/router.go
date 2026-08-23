@@ -108,7 +108,7 @@ func Setup(cfg *config.Config, db *sql.DB, hub *websocket.Hub, log *zap.Logger) 
 				return callLLM(aiService, modelID, prompt)
 			},
 		)
-		agentHandler := handler.NewAgentHandler(agentService)
+		agentHandler := handler.NewAgentHandler(agentService).WithAI(aiService)
 		prot.GET("/agents", agentHandler.ListAgents)
 		prot.POST("/agents", agentHandler.CreateAgent)
 		prot.GET("/agents/:id", agentHandler.GetAgent)
@@ -118,6 +118,7 @@ func Setup(cfg *config.Config, db *sql.DB, hub *websocket.Hub, log *zap.Logger) 
 		prot.GET("/agents/sessions", agentHandler.ListSessions)
 		prot.GET("/agents/sessions/:id", agentHandler.GetSession)
 		prot.POST("/agents/sessions/:id/messages", agentHandler.SendMessage)
+		prot.POST("/agents/sessions/:id/run", agentHandler.ChatRun)
 
 		prot.GET("/audit-logs", agentHandler.ListAudit)
 

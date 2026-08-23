@@ -13,6 +13,8 @@ const (
 	ProviderOpenAICompatible ProviderType = "openai-compatible"
 	ProviderAnthropic        ProviderType = "anthropic"
 	ProviderGemini           ProviderType = "gemini"
+	ProviderOllama           ProviderType = "ollama"
+	ProviderDeepSeek         ProviderType = "deepseek"
 	ProviderMock             ProviderType = "mock" // development e2e only
 )
 

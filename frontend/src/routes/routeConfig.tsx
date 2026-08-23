@@ -1,6 +1,7 @@
 import { lazy } from 'react';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { ROUTE_PERMISSIONS } from '@/utils/permissions';
+import AgentChatPage from '@/features/agents/AgentChatPage';
 
 const DashboardPage = lazy(() => import('@/features/dashboard/DashboardPage'));
 const ServerListPage = lazy(() => import('@/features/servers/ServerListPage'));

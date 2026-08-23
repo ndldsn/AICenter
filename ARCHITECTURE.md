@@ -1869,6 +1869,9 @@ type ProviderConfig struct {
 
 // 注册
 var providers = map[string]func(ProviderConfig) (Provider, error){
+    "openai": func(cfg ProviderConfig) (Provider, error) {
+        return openai.New(cfg)
+    },
     "openai-compatible": func(cfg ProviderConfig) (Provider, error) {
         return openai.New(cfg)
     },
@@ -1877,6 +1880,15 @@ var providers = map[string]func(ProviderConfig) (Provider, error){
     },
     "gemini": func(cfg ProviderConfig) (Provider, error) {
         return gemini.New(cfg)
+    },
+    "deepseek": func(cfg ProviderConfig) (Provider, error) {
+        return openai.New(cfg)  // OpenAI 兼容
+    },
+    "ollama": func(cfg ProviderConfig) (Provider, error) {
+        return openai.New(cfg)  // OpenAI 兼容
+    },
+    "mock": func(cfg ProviderConfig) (Provider, error) {
+        return mock.New(cfg)     // 单元测试 / demo
     },
 }
 ```

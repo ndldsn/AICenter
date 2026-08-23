@@ -14,11 +14,17 @@ import (
 )
 
 type AgentHandler struct {
-	svc *service.AgentService
+	svc   *service.AgentService
+	aiSvc *service.AIService
 }
 
 func NewAgentHandler(svc *service.AgentService) *AgentHandler {
 	return &AgentHandler{svc: svc}
+}
+
+func (h *AgentHandler) WithAI(svc *service.AIService) *AgentHandler {
+	h.aiSvc = svc
+	return h
 }
 
 func (h *AgentHandler) ListAgents(c *gin.Context) {
