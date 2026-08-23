@@ -79,7 +79,7 @@ export function AddServerModal({ visible, onClose, server, onSuccess }: AddServe
             title={
                 <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <IconDesktop />
-                    {isEdit ? 'Edit Server' : 'Add New Server'}
+                    {isEdit ? '编辑服务器' : '添加服务器'}
                 </span>
             }
             visible={visible}
@@ -90,7 +90,7 @@ export function AddServerModal({ visible, onClose, server, onSuccess }: AddServe
             maskClosable={false}
         >
             <Tabs defaultActiveTab="basic">
-                <TabPane key="basic" title="Basic Info">
+                <TabPane key="basic" title="基本信息">
                     <Form
                         form={form}
                         layout="vertical"
@@ -102,63 +102,63 @@ export function AddServerModal({ visible, onClose, server, onSuccess }: AddServe
                         }}
                     >
                         <Item
-                            label="Server Name"
+                            label="服务器名称"
                             field="name"
-                            rules={[{ required: true, message: 'Please enter server name' }]}
+                            rules={[{ required: true, message: '请输入服务器名称' }]}
                         >
-                            <Input placeholder="e.g., Production Web Server" />
+                            <Input placeholder="例如：生产 Web 服务器" />
                         </Item>
 
                         <div style={{ display: 'flex', gap: 16 }}>
                             <Item
-                                label="Host / IP"
+                                label="主机 / IP"
                                 field="host"
                                 style={{ flex: 1 }}
-                                rules={[{ required: true, message: 'Please enter host' }]}
+                                rules={[{ required: true, message: '请输入主机地址' }]}
                             >
-                                <Input placeholder="192.168.1.100 or server.example.com" />
+                                <Input placeholder="192.168.1.100 或 server.example.com" />
                             </Item>
-                            <Item label="Port" field="port" style={{ width: 100 }}>
+                            <Item label="端口" field="port" style={{ width: 100 }}>
                                 <InputNumber min={1} max={65535} placeholder="22" />
                             </Item>
                         </div>
 
                         <Item
-                            label="Username"
+                            label="用户名"
                             field="username"
-                            rules={[{ required: true, message: 'Please enter username' }]}
+                            rules={[{ required: true, message: '请输入用户名' }]}
                         >
                             <Input placeholder="root" />
                         </Item>
                     </Form>
                 </TabPane>
 
-                <TabPane key="auth" title="Authentication">
+                <TabPane key="auth" title="认证">
                     <Form form={form} layout="vertical">
-                        <Item label="Auth Type" field="auth_type">
-                            <Select placeholder="Select auth type">
-                                <Select.Option value="password">Password</Select.Option>
-                                <Select.Option value="key">SSH Key</Select.Option>
+                        <Item label="认证方式" field="auth_type">
+                            <Select placeholder="选择认证方式">
+                                <Select.Option value="password">密码</Select.Option>
+                                <Select.Option value="key">SSH 密钥</Select.Option>
                             </Select>
                         </Item>
 
                         {authType === 'key' ? (
-                            <Item label="Private Key" field="private_key">
+                            <Item label="私钥" field="private_key">
                                 <Input.TextArea
-                                    placeholder="Paste your SSH private key here..."
+                                    placeholder="粘贴你的 SSH 私钥..."
                                     rows={6}
                                     style={{ fontFamily: 'monospace' }}
                                 />
                             </Item>
                         ) : (
-                            <Item label="Password" field="password">
-                                <Input.Password placeholder="Enter password" />
+                            <Item label="密码" field="password">
+                                <Input.Password placeholder="请输入密码" />
                             </Item>
                         )}
                     </Form>
                 </TabPane>
 
-                <TabPane key="test" title="Test Connection">
+                <TabPane key="test" title="测试连接">
                     <div style={{ textAlign: 'center', padding: 20 }}>
                         <Button
                             type="primary"
@@ -167,27 +167,27 @@ export function AddServerModal({ visible, onClose, server, onSuccess }: AddServe
                             loading={testing}
                             size="large"
                         >
-                            {testing ? 'Testing...' : 'Test Connection'}
+                            {testing ? '正在测试...' : '测试连接'}
                         </Button>
 
                         {testResult && (
                             <div style={{ marginTop: 20, textAlign: 'left' }}>
                                 <Descriptions
                                     column={2}
-                                    title="Connection Test Result"
+                                    title="连接测试结果"
                                     data={[
                                         {
-                                            label: 'Status',
+                                            label: '状态',
                                             value: (
                                                 <Tag color={testResult.success ? 'green' : 'red'}>
-                                                    {testResult.success ? 'Success' : 'Failed'}
+                                                    {testResult.success ? '成功' : '失败'}
                                                 </Tag>
                                             ),
                                         },
-                                        { label: 'Message', value: testResult.message },
+                                        { label: '信息', value: testResult.message },
                                         { label: 'SSH Banner', value: testResult.ssh_banner || '-' },
                                         {
-                                            label: 'Timestamp',
+                                            label: '时间',
                                             value: new Date(testResult.timestamp).toLocaleString(),
                                         },
                                     ]}
@@ -198,23 +198,23 @@ export function AddServerModal({ visible, onClose, server, onSuccess }: AddServe
                                 {testResult.system_info && (
                                     <Descriptions
                                         column={2}
-                                        title="System Info"
+                                        title="系统信息"
                                         data={[
-                                            { label: 'OS', value: testResult.system_info.os },
+                                            { label: '系统', value: testResult.system_info.os },
                                             {
-                                                label: 'Hostname',
+                                                label: '主机名',
                                                 value: testResult.system_info.hostname,
                                             },
                                             {
-                                                label: 'Kernel',
+                                                label: '内核',
                                                 value: testResult.system_info.kernel,
                                             },
                                             {
-                                                label: 'CPU Cores',
+                                                label: 'CPU 核心',
                                                 value: testResult.system_info.cpu_cores,
                                             },
                                             {
-                                                label: 'Memory (GB)',
+                                                label: '内存 (GB)',
                                                 value: testResult.system_info.memory_gb.toFixed(1),
                                             },
                                         ]}

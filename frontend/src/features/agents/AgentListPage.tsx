@@ -228,9 +228,9 @@ export default function AgentListPage() {
         <Space direction="vertical" size={16} style={{ width: '100%' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
-                    <Title heading={4}>AI Agents</Title>
+                    <Title heading={4}>智能体</Title>
                     <Paragraph type="secondary">
-                        Configure agents, choose tools and permission policy, then run them in a chat.
+                        配置智能体、选择工具和权限策略，然后在对话中运行
                     </Paragraph>
                 </div>
                 <Space>
@@ -238,7 +238,7 @@ export default function AgentListPage() {
                         审批 ({approvals.length})
                     </Button>
                     <Button icon={<IconPlus />} onClick={refresh}>刷新</Button>
-                    <Button type="primary" icon={<IconPlus />} onClick={openCreate}>新建 Agent</Button>
+                    <Button type="primary" icon={<IconPlus />} onClick={openCreate}>新建智能体</Button>
                 </Space>
             </div>
 
@@ -247,13 +247,13 @@ export default function AgentListPage() {
                     agents.length ? (
                         <Table<Agent> rowKey="id" data={agents} columns={columns} pagination={false} />
                     ) : (
-                        <Empty description="No agents yet. Create one to start." />
+                        <Empty description="暂无智能体，请先创建。" />
                     )
                 )}
             </Card>
 
             <Modal
-                title={editingId ? 'Edit Agent' : 'Create Agent'}
+                title={editingId ? '编辑智能体' : '创建智能体'}
                 visible={modalOpen}
                 onOk={onSubmit}
                 onCancel={() => setModalOpen(false)}
@@ -262,13 +262,13 @@ export default function AgentListPage() {
                 style={{ width: 620 }}
             >
                 <Form form={form} layout="vertical">
-                    <Form.Item label="Name" field="name" rules={[{ required: true }]}>
+                    <Form.Item label="名称" field="name" rules={[{ required: true }]}>
                         <Input placeholder="web-maintenance" />
                     </Form.Item>
-                    <Form.Item label="Description" field="description">
+                    <Form.Item label="描述" field="description">
                         <Input.TextArea rows={2} />
                     </Form.Item>
-                    <Form.Item label="Model (provider id)" field="model_id" rules={[{ required: true }]}>
+                    <Form.Item label="模型 (provider id)" field="model_id" rules={[{ required: true }]}>
                         <Select
                             options={providers.map(p => ({
                                 label: `${p.display_name || p.name} (${p.id})`,
@@ -277,34 +277,34 @@ export default function AgentListPage() {
                             onChange={onProviderChange}
                         />
                     </Form.Item>
-                    <Form.Item label="System prompt" field="system_prompt">
+                    <Form.Item label="系统提示词" field="system_prompt">
                         <Input.TextArea rows={2} />
                     </Form.Item>
-                    <Form.Item label="Permission mode" field="tool_permission_mode" rules={[{ required: true }]}>
+                    <Form.Item label="权限模式" field="tool_permission_mode" rules={[{ required: true }]}>
                         <Select options={MODES} />
                     </Form.Item>
-                    <Form.Item label="Available tools" field="tools">
+                    <Form.Item label="可用工具" field="tools">
                         <Select
                             mode="multiple"
                             options={DEFAULT_TOOLS.map(t => ({ label: t, value: t }))}
                         />
                     </Form.Item>
-                    <Form.Item label="Require approval for" field="require_approval_for">
+                    <Form.Item label="需要审批的工具" field="require_approval_for">
                         <Select
                             mode="multiple"
                             options={DEFAULT_TOOLS.map(t => ({ label: t, value: t }))}
                         />
                     </Form.Item>
-                    <Form.Item label="Temperature" field="temperature">
+                    <Form.Item label="温度" field="temperature">
                         <InputNumber min={0} max={2} step={0.1} style={{ width: 120 }} />
                     </Form.Item>
-                    <Form.Item label="Max tokens" field="max_tokens">
+                    <Form.Item label="最大令牌数" field="max_tokens">
                         <InputNumber min={1} max={16384} style={{ width: 120 }} />
                     </Form.Item>
-                    <Form.Item label="Max iterations" field="max_iterations">
+                    <Form.Item label="最大迭代次数" field="max_iterations">
                         <InputNumber min={1} max={50} style={{ width: 120 }} />
                     </Form.Item>
-                    <Form.Item label="Enabled" field="is_enabled">
+                    <Form.Item label="启用" field="is_enabled">
                         <Switch checked={(form.getFieldValue('is_enabled') as boolean)}
                                 onChange={(v: boolean) => form.setFieldValue('is_enabled', v)} />
                     </Form.Item>
