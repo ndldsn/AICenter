@@ -21,6 +21,7 @@ import {
 import { IconPlus, IconDelete, IconRobot, IconMessage } from '@arco-design/web-react/icon';
 import { agentApi, Agent } from '@/services/agent';
 import { aiApi, AIProvider } from '@/services/ai';
+import { useT } from '@/stores/uiStore';
 
 const { Title, Paragraph } = Typography;
 
@@ -33,6 +34,7 @@ const MODES = [
 const DEFAULT_TOOLS = ['list_servers', 'get_server_info', 'list_models', 'echo', 'restart_service'];
 
 export default function AgentListPage() {
+    const t = useT();
     const [agents, setAgents] = useState<Agent[]>([]);
     const [providers, setProviders] = useState<AIProvider[]>([]);
     const [loading, setLoading] = useState(false);
@@ -108,10 +110,10 @@ export default function AgentListPage() {
         try {
             if (editingId) {
                 await agentApi.updateAgent(editingId, values);
-                Message.success('Agent 已更新');
+                Message.success(t('agents.updated'));
             } else {
                 await agentApi.createAgent(values);
-                Message.success('Agent 已创建');
+                Message.success(t('agents.created'));
             }
             setModalOpen(false);
             refresh();
@@ -122,7 +124,7 @@ export default function AgentListPage() {
 
     const onDelete = async (id: string) => {
         await agentApi.deleteAgent(id);
-        Message.success('Agent 已删除');
+        Message.success(t('agents.deleted'));
         refresh();
     };
 
@@ -148,7 +150,7 @@ export default function AgentListPage() {
             const runs = result.data?.tool_runs || [];
             setChatPlans(runs);
             if (result.data?.approval) {
-                Message.warning(`需要审批: ${result.data.approval.tool_name}`);
+                Message.warning(t('agents.approval.required').replace('{tool}', result.data.approval.tool_name));
                 setShowApprovals(true);
                 loadApprovals();
             }
@@ -170,54 +172,54 @@ export default function AgentListPage() {
 
     const handleApprove = async (id: string) => {
         await agentApi.approve(id);
-        Message.success('已批准');
+        Message.success(t('agents.approval.approved'));
         loadApprovals();
     };
 
     const handleReject = async (id: string) => {
         await agentApi.reject(id);
-        Message.success('已拒绝');
+        Message.success(t('agents.approval.rejected'));
         loadApprovals();
     };
 
     const columns = [
         {
-            title: '智能体',
+            title: t('agents.column.name'),
             dataIndex: 'name',
             render: (_: any, r: Agent) => (
                 <Space>
                     <IconRobot />
                     <strong>{r.name}</strong>
                     <Tag size="small">{r.tool_permission_mode}</Tag>
-                    {r.is_enabled ? <Tag color="green" size="small">启用</Tag> : <Tag color="gray" size="small">禁用</Tag>}
+                    {r.is_enabled ? <Tag color="green" size="small">{t('agents.enabled')}</Tag> : <Tag color="gray" size="small">{t('agents.disabled')}</Tag>}
                 </Space>
             ),
         },
         {
-            title: '模型',
+            title: t('agents.column.model'),
             dataIndex: 'model_id',
             render: (v: string) => <Tag size="small">{v}</Tag>,
         },
         {
-            title: 'Tools',
+            title: t('agents.column.tools'),
             render: (_: any, r: Agent) => (
                 <Space wrap>
-                    {(r.tools || []).map(t => <TagOld key={t} size="small">{t}</TagOld>)}
+                    {(r.tools || []).map(tool => <TagOld key={tool} size="small">{tool}</TagOld>)}
                 </Space>
             ),
         },
         {
-            title: '温度 / 最大迭代',
+            title: t('agents.column.tempIter'),
             render: (_: any, r: Agent) => <span>{r.temperature} / {r.max_iterations}</span>,
         },
         {
-            title: '操作',
+            title: t('agents.column.actions'),
             render: (_: any, r: Agent) => (
                 <Space>
-                    <Button size="mini" type="text" icon={<IconMessage />} onClick={() => openChat(r)}>对话</Button>
-                    <Button size="mini" type="text" onClick={() => openEdit(r)}>编辑</Button>
-                    <Popconfirm title="确认删除?" onOk={() => onDelete(r.id)}>
-                        <Button size="mini" type="text" status="danger" icon={<IconDelete />}>删除</Button>
+                    <Button size="mini" type="text" icon={<IconMessage />} onClick={() => openChat(r)}>{t('agents.action.chat')}</Button>
+                    <Button size="mini" type="text" onClick={() => openEdit(r)}>{t('agents.action.edit')}</Button>
+                    <Popconfirm title={t('agents.confirmDelete')} onOk={() => onDelete(r.id)}>
+                        <Button size="mini" type="text" status="danger" icon={<IconDelete />}>{t('agents.action.delete')}</Button>
                     </Popconfirm>
                 </Space>
             ),
@@ -228,17 +230,17 @@ export default function AgentListPage() {
         <Space direction="vertical" size={16} style={{ width: '100%' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
-                    <Title heading={4}>智能体</Title>
+                    <Title heading={4}>{t('agents.title')}</Title>
                     <Paragraph type="secondary">
-                        配置智能体、选择工具和权限策略，然后在对话中运行
+                        {t('agents.subtitle')}
                     </Paragraph>
                 </div>
                 <Space>
                     <Button type="secondary" onClick={() => { setShowApprovals(!showApprovals); loadApprovals(); }}>
-                        审批 ({approvals.length})
+                        {t('agents.approvals').replace('{n}', approvals.length.toString())}
                     </Button>
-                    <Button icon={<IconPlus />} onClick={refresh}>刷新</Button>
-                    <Button type="primary" icon={<IconPlus />} onClick={openCreate}>新建智能体</Button>
+                    <Button icon={<IconPlus />} onClick={refresh}>{t('agents.refresh')}</Button>
+                    <Button type="primary" icon={<IconPlus />} onClick={openCreate}>{t('agents.create')}</Button>
                 </Space>
             </div>
 
@@ -247,28 +249,28 @@ export default function AgentListPage() {
                     agents.length ? (
                         <Table<Agent> rowKey="id" data={agents} columns={columns} pagination={false} />
                     ) : (
-                        <Empty description="暂无智能体，请先创建。" />
+                        <Empty description={t('agents.empty')} />
                     )
                 )}
             </Card>
 
             <Modal
-                title={editingId ? '编辑智能体' : '创建智能体'}
+                title={editingId ? t('agents.edit') : t('agents.create')}
                 visible={modalOpen}
                 onOk={onSubmit}
                 onCancel={() => setModalOpen(false)}
-                okText={editingId ? '更新' : '创建'}
+                okText={editingId ? t('common.update') : t('common.create')}
                 confirmLoading={saving}
                 style={{ width: 620 }}
             >
                 <Form form={form} layout="vertical">
-                    <Form.Item label="名称" field="name" rules={[{ required: true }]}>
+                    <Form.Item label={t('agents.name')} field="name" rules={[{ required: true }]}>
                         <Input placeholder="web-maintenance" />
                     </Form.Item>
-                    <Form.Item label="描述" field="description">
+                    <Form.Item label={t('agents.description')} field="description">
                         <Input.TextArea rows={2} />
                     </Form.Item>
-                    <Form.Item label="模型 (provider id)" field="model_id" rules={[{ required: true }]}>
+                    <Form.Item label={t('agents.model')} field="model_id" rules={[{ required: true }]}>
                         <Select
                             options={providers.map(p => ({
                                 label: `${p.display_name || p.name} (${p.id})`,
@@ -277,34 +279,34 @@ export default function AgentListPage() {
                             onChange={onProviderChange}
                         />
                     </Form.Item>
-                    <Form.Item label="系统提示词" field="system_prompt">
+                    <Form.Item label={t('agents.systemPrompt')} field="system_prompt">
                         <Input.TextArea rows={2} />
                     </Form.Item>
-                    <Form.Item label="权限模式" field="tool_permission_mode" rules={[{ required: true }]}>
-                        <Select options={MODES} />
+                    <Form.Item label={t('agents.permissionMode')} field="tool_permission_mode" rules={[{ required: true }]}>
+                        <Select options={MODES.map(m => ({ label: m.label, value: m.value }))} />
                     </Form.Item>
-                    <Form.Item label="可用工具" field="tools">
+                    <Form.Item label={t('agents.availableTools')} field="tools">
                         <Select
                             mode="multiple"
-                            options={DEFAULT_TOOLS.map(t => ({ label: t, value: t }))}
+                            options={DEFAULT_TOOLS.map(tool => ({ label: tool, value: tool }))}
                         />
                     </Form.Item>
-                    <Form.Item label="需要审批的工具" field="require_approval_for">
+                    <Form.Item label={t('agents.requireApproval')} field="require_approval_for">
                         <Select
                             mode="multiple"
-                            options={DEFAULT_TOOLS.map(t => ({ label: t, value: t }))}
+                            options={DEFAULT_TOOLS.map(tool => ({ label: tool, value: tool }))}
                         />
                     </Form.Item>
-                    <Form.Item label="温度" field="temperature">
+                    <Form.Item label={t('agents.temperature')} field="temperature">
                         <InputNumber min={0} max={2} step={0.1} style={{ width: 120 }} />
                     </Form.Item>
-                    <Form.Item label="最大令牌数" field="max_tokens">
+                    <Form.Item label={t('agents.maxTokens')} field="max_tokens">
                         <InputNumber min={1} max={16384} style={{ width: 120 }} />
                     </Form.Item>
-                    <Form.Item label="最大迭代次数" field="max_iterations">
+                    <Form.Item label={t('agents.maxIterations')} field="max_iterations">
                         <InputNumber min={1} max={50} style={{ width: 120 }} />
                     </Form.Item>
-                    <Form.Item label="启用" field="is_enabled">
+                    <Form.Item label={t('agents.enable')} field="is_enabled">
                         <Switch checked={(form.getFieldValue('is_enabled') as boolean)}
                                 onChange={(v: boolean) => form.setFieldValue('is_enabled', v)} />
                     </Form.Item>
@@ -338,11 +340,12 @@ function AgentChatDrawer(props: {
     input: string; onInput: (v: string) => void; onSend: () => void;
     output: string; plans: any[];
 }) {
+    const t = useT();
     return (
         <Card
             style={{ width: '100%', display: props.open ? 'block' : 'none' }}
-            title="Agent 会话"
-            extra={<Button size="mini" onClick={props.onClose}>关闭</Button>}
+            title={t('agents.session.title')}
+            extra={<Button size="mini" onClick={props.onClose}>{t('agents.session.close')}</Button>}
         >
             <Space direction="vertical" size={10} style={{ width: '100%' }}>
                 <div style={{ display: 'flex', gap: 8 }}>
@@ -350,11 +353,11 @@ function AgentChatDrawer(props: {
                         value={props.input}
                         onChange={props.onInput}
                         onPressEnter={props.onSend}
-                        placeholder="Ask the agent... e.g. 'list servers'"
+                        placeholder={t('agents.session.placeholder')}
                         disabled={props.loading}
                         style={{ flex: 1 }}
                     />
-                    <Button type="primary" loading={props.loading} onClick={props.onSend}>运行</Button>
+                    <Button type="primary" loading={props.loading} onClick={props.onSend}>{t('agents.session.run')}</Button>
                 </div>
                 <div
                     style={{
@@ -369,11 +372,11 @@ function AgentChatDrawer(props: {
                         fontSize: 12,
                     }}
                 >
-                    {props.output || <span style={{ color: 'var(--color-text-3)' }}>Agent 输出会显示在这里</span>}
+                    {props.output || <span style={{ color: 'var(--color-text-3)' }}>{t('agents.session.outputHint')}</span>}
                 </div>
                 {props.plans.length > 0 && (
                     <Space direction="vertical" size={6}>
-                        <Typography.Text type="secondary" style={{ fontSize: 12 }}>工具计划 / 结果:</Typography.Text>
+                        <Typography.Text type="secondary" style={{ fontSize: 12 }}>{t('agents.session.toolPlan')}</Typography.Text>
                         <Space wrap>
                             {props.plans.map((r, i) => (
                                 <Tag key={i} color={r.result?.ok ? 'green' : 'red'}>
@@ -395,27 +398,28 @@ function ApprovalPanel(props: {
     onReject: (id: string) => void;
     onClose: () => void;
 }) {
+    const t = useT();
     if (!props.visible) return null;
     return (
-        <Card title="待审批" style={{ width: '100%' }} extra={<Button size="mini" onClick={props.onClose}>关闭</Button>}>
+        <Card title={t('agents.approval.title')} style={{ width: '100%' }} extra={<Button size="mini" onClick={props.onClose}>{t('agents.session.close')}</Button>}>
             {props.approvals.length === 0 ? (
-                <Empty description="No pending approvals" />
+                <Empty description={t('agents.approval.noPending')} />
             ) : (
                 <Table<any>
                     rowKey="id"
                     data={props.approvals}
                     pagination={false}
                     columns={[
-                        { title: '工具', dataIndex: 'tool_name', render: (v: string) => <Tag>{v}</Tag> },
-                        { title: '风险', dataIndex: 'risk_level' },
-                        { title: '申请人', dataIndex: 'requested_by' },
-                        { title: '创建', dataIndex: 'created_at' },
+                        { title: t('agents.approval.tool'), dataIndex: 'tool_name', render: (v: string) => <Tag>{v}</Tag> },
+                        { title: t('agents.approval.risk'), dataIndex: 'risk_level' },
+                        { title: t('agents.approval.requester'), dataIndex: 'requested_by' },
+                        { title: t('agents.approval.created'), dataIndex: 'created_at' },
                         {
-                            title: '操作',
+                            title: t('agents.approval.actions'),
                             render: (_: any, r: any) => (
                                 <Space>
-                                    <Button size="mini" type="primary" onClick={() => props.onApprove(r.id)}>批准</Button>
-                                    <Button size="mini" status="danger" onClick={() => props.onReject(r.id)}>拒绝</Button>
+                                    <Button size="mini" type="primary" onClick={() => props.onApprove(r.id)}>{t('agents.approval.approve')}</Button>
+                                    <Button size="mini" status="danger" onClick={() => props.onReject(r.id)}>{t('agents.approval.reject')}</Button>
                                 </Space>
                             ),
                         },

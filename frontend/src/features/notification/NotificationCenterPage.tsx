@@ -4,25 +4,18 @@ import {
     Select, Switch, Popconfirm, Spin, Message, Tabs, Radio,
 } from '@arco-design/web-react';
 import { IconPlus, IconRefresh, IconSend } from '@arco-design/web-react/icon';
+import { useT } from '@/stores/uiStore';
 import {
     notificationApi, NotificationChannel, NotificationTemplate, DeliveryLog, ChannelType,
 } from '@/services/notification';
 
 const { Title, Text } = Typography;
 
-const CHANNEL_TYPE_LABELS: Record<ChannelType, string> = {
-    webhook: 'Webhook',
-    email: '邮件',
-    sms: '短信',
-    im: 'IM',
-    console: '控制台 (开发)',
-};
-
 const CHANNEL_TYPES: ChannelType[] = ['webhook', 'email', 'sms', 'im', 'console'];
 const EVENT_TYPES = [
-    { label: '告警触发', value: 'alert.fired' },
-    { label: '审批请求', value: 'approval.requested' },
-    { label: '审批结果', value: 'approval.resolved' },
+    { label: 'alert.fired', value: 'alert.fired' },
+    { label: 'approval.requested', value: 'approval.requested' },
+    { label: 'approval.resolved', value: 'approval.resolved' },
 ];
 
 const STATUS_COLORS: Record<string, string> = {
@@ -32,22 +25,23 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 export default function NotificationCenterPage() {
+    const t = useT();
     const [activeTab, setActiveTab] = useState('channels');
     return (
         <div style={{ padding: 16 }}>
-            <Title heading={3}>通知中心</Title>
-            <Text type="secondary">管理通知渠道、模板与投递日志；告警与审批事件将按模板自动推送。</Text>
+            <Title heading={3}>{t('notifications.title')}</Title>
+            <Text type="secondary">{t('notifications.subtitle')}</Text>
             <Tabs activeTab={activeTab} onChange={setActiveTab} style={{ marginTop: 12 }}>
-                <Tabs.TabPane title="通知渠道" key="channels">
+                <Tabs.TabPane title={t('notifications.channels')} key="channels">
                     <ChannelTab />
                 </Tabs.TabPane>
-                <Tabs.TabPane title="通知模板" key="templates">
+                <Tabs.TabPane title={t('notifications.templates')} key="templates">
                     <TemplateTab />
                 </Tabs.TabPane>
-                <Tabs.TabPane title="投递日志" key="logs">
+                <Tabs.TabPane title={t('notifications.logs')} key="logs">
                     <DeliveryLogTab />
                 </Tabs.TabPane>
-                <Tabs.TabPane title="测试发送" key="test">
+                <Tabs.TabPane title={t('notifications.testSend')} key="test">
                     <SendTestTab />
                 </Tabs.TabPane>
             </Tabs>
@@ -56,6 +50,7 @@ export default function NotificationCenterPage() {
 }
 
 function ChannelTab() {
+    const t = useT();
     const [items, setItems] = useState<NotificationChannel[]>([]);
     const [loading, setLoading] = useState(false);
     const [modalOpen, setModalOpen] = useState(false);
@@ -86,31 +81,37 @@ function ChannelTab() {
         setSaving(true);
         try {
             let cfg = '{}';
-            try { cfg = JSON.stringify(JSON.parse(v.config || '{}')); } catch { Message.error('配置必须是合法 JSON'); return; }
+            try { cfg = JSON.stringify(JSON.parse(v.config || '{}')); } catch { Message.error(t('notifications.configMustBeJson')); return; }
             if (editing) {
                 await notificationApi.updateChannel(editing.id, { name: v.name, type: v.type, is_enabled: v.is_enabled, config: cfg });
             } else {
                 await notificationApi.createChannel({ name: v.name, type: v.type, is_enabled: v.is_enabled, config: cfg });
             }
-            Message.success('已保存');
+            Message.success(t('notifications.saved'));
             setModalOpen(false);
             refresh();
         } finally { setSaving(false); }
     };
 
-    const remove = async (id: string) => { await notificationApi.deleteChannel(id); Message.success('已删除'); refresh(); };
+    const remove = async (id: string) => { await notificationApi.deleteChannel(id); Message.success(t('notifications.deleted')); refresh(); };
 
     const columns = [
-        { title: '名称', dataIndex: 'name' },
-        { title: '类型', dataIndex: 'type', render: (t: ChannelType) => <Tag color="arcoblue">{CHANNEL_TYPE_LABELS[t]}</Tag> },
-        { title: '状态', dataIndex: 'is_enabled', render: (e: boolean) => e ? <Tag color="green">启用</Tag> : <Tag>禁用</Tag> },
-        { title: '配置预览', dataIndex: 'config', render: (c?: string) => <Text type="secondary" style={{ fontSize: 12 }}>{c && c.length > 60 ? c.slice(0, 60) + '…' : (c || '-')}</Text> },
+        { title: t('notifications.column.name'), dataIndex: 'name' },
+        { title: t('notifications.column.type'), dataIndex: 'type', render: (tp: ChannelType) => {
+            const labels: Record<ChannelType, string> = {
+                webhook: t('notifications.webhook'), email: t('notifications.email'),
+                sms: t('notifications.sms'), im: t('notifications.im'), console: t('notifications.console'),
+            };
+            return <Tag color="arcoblue">{labels[tp]}</Tag>;
+        } },
+        { title: t('notifications.column.status'), dataIndex: 'is_enabled', render: (e: boolean) => e ? <Tag color="green">{t('notifications.enable')}</Tag> : <Tag>{t('notifications.disable')}</Tag> },
+        { title: t('notifications.column.config'), dataIndex: 'config', render: (c?: string) => <Text type="secondary" style={{ fontSize: 12 }}>{c && c.length > 60 ? c.slice(0, 60) + '…' : (c || '-')}</Text> },
         {
-            title: '操作', render: (_: any, r: NotificationChannel) => (
+            title: t('notifications.column.actions'), render: (_: any, r: NotificationChannel) => (
                 <Space>
-                    <Button size="small" onClick={() => openEdit(r)}>编辑</Button>
-                    <Popconfirm title="确认删除该渠道？" onOk={() => remove(r.id)}>
-                        <Button size="small" status="danger">删除</Button>
+                    <Button size="small" onClick={() => openEdit(r)}>{t('notifications.edit')}</Button>
+                    <Popconfirm title={t('notifications.confirmDeleteChannel')} onOk={() => remove(r.id)}>
+                        <Button size="small" status="danger">{t('notifications.delete')}</Button>
                     </Popconfirm>
                 </Space>
             ),
@@ -120,27 +121,27 @@ function ChannelTab() {
     return (
         <Card>
             <Space style={{ marginBottom: 12 }}>
-                <Button type="primary" icon={<IconPlus />} onClick={openCreate}>新建渠道</Button>
-                <Button icon={<IconRefresh />} onClick={refresh}>刷新</Button>
+                <Button type="primary" icon={<IconPlus />} onClick={openCreate}>{t('notifications.newChannel')}</Button>
+                <Button icon={<IconRefresh />} onClick={refresh}>{t('notifications.refresh')}</Button>
             </Space>
             <Spin loading={loading}>
                 <Table rowKey="id" columns={columns} data={items} pagination={false} />
             </Spin>
             <Modal
-                visible={modalOpen} title={editing ? '编辑渠道' : '新建渠道'} onOk={save} onCancel={() => setModalOpen(false)}
+                visible={modalOpen} title={editing ? t('notifications.editChannel') : t('notifications.newChannel')} onOk={save} onCancel={() => setModalOpen(false)}
                 confirmLoading={saving}
             >
                 <Form form={form} layout="vertical">
-                    <Form.Item label="名称" field="name" rules={[{ required: true, message: '必填' }]}>
-                        <Input placeholder="如 Slack Webhook" />
+                    <Form.Item label={t('notifications.name')} field="name" rules={[{ required: true, message: t('notifications.nameRequired') }]}>
+                        <Input placeholder="Slack Webhook" />
                     </Form.Item>
-                    <Form.Item label="类型" field="type" rules={[{ required: true }]}>
-                        <Select options={CHANNEL_TYPES.map(t => ({ label: CHANNEL_TYPE_LABELS[t], value: t }))} />
+                    <Form.Item label={t('notifications.type')} field="type" rules={[{ required: true }]}>
+                        <Select options={CHANNEL_TYPES.map(tp => ({ label: tp, value: tp }))} />
                     </Form.Item>
-                    <Form.Item label="配置 (JSON)" field="config" extra="webhook: {url, token}; email/sms: {to}; im: {token}">
+                    <Form.Item label={t('notifications.configJson')} field="config" extra={t('notifications.configHint')}>
                         <Input.TextArea rows={4} placeholder='{"url":"https://hooks.slack.com/...","token":""}' />
                     </Form.Item>
-                    <Form.Item label="启用" field="is_enabled"><Switch /></Form.Item>
+                    <Form.Item label={t('notifications.enable')} field="is_enabled"><Switch /></Form.Item>
                 </Form>
             </Modal>
         </Card>
@@ -148,6 +149,7 @@ function ChannelTab() {
 }
 
 function TemplateTab() {
+    const t = useT();
     const [items, setItems] = useState<NotificationTemplate[]>([]);
     const [loading, setLoading] = useState(false);
     const [modalOpen, setModalOpen] = useState(false);
@@ -162,9 +164,9 @@ function TemplateTab() {
     useEffect(() => { refresh(); }, []);
 
     const openCreate = () => { setEditing(null); form.resetFields(); form.setFieldValue('event_type', 'alert.fired'); form.setFieldValue('is_enabled', true); form.setFieldValue('channels', '["console"]'); setModalOpen(true); };
-    const openEdit = (t: NotificationTemplate) => {
-        setEditing(t);
-        form.setFieldsValue({ name: t.name, event_type: t.event_type, subject: t.subject || '', body: t.body, channels: t.channels || '[]', is_enabled: t.is_enabled });
+    const openEdit = (tp: NotificationTemplate) => {
+        setEditing(tp);
+        form.setFieldsValue({ name: tp.name, event_type: tp.event_type, subject: tp.subject || '', body: tp.body, channels: tp.channels || '[]', is_enabled: tp.is_enabled });
         setModalOpen(true);
     };
 
@@ -177,24 +179,24 @@ function TemplateTab() {
             } else {
                 await notificationApi.createTemplate(v);
             }
-            Message.success('已保存');
+            Message.success(t('notifications.saved'));
             setModalOpen(false);
             refresh();
         } finally { setSaving(false); }
     };
-    const remove = async (id: string) => { await notificationApi.deleteTemplate(id); Message.success('已删除'); refresh(); };
+    const remove = async (id: string) => { await notificationApi.deleteTemplate(id); Message.success(t('notifications.deleted')); refresh(); };
 
     const columns = [
-        { title: '名称', dataIndex: 'name' },
-        { title: '事件类型', dataIndex: 'event_type', render: (e: string) => <Tag color="purple">{e}</Tag> },
-        { title: '标题', dataIndex: 'subject', render: (s?: string) => s || <Text type="secondary">-</Text> },
-        { title: '状态', dataIndex: 'is_enabled', render: (e: boolean) => e ? <Tag color="green">启用</Tag> : <Tag>禁用</Tag> },
+        { title: t('notifications.name'), dataIndex: 'name' },
+        { title: t('notifications.column.eventType'), dataIndex: 'event_type', render: (e: string) => <Tag color="purple">{e}</Tag> },
+        { title: t('notifications.column.subject'), dataIndex: 'subject', render: (s?: string) => s || <Text type="secondary">-</Text> },
+        { title: t('notifications.column.status'), dataIndex: 'is_enabled', render: (e: boolean) => e ? <Tag color="green">{t('notifications.enable')}</Tag> : <Tag>{t('notifications.disable')}</Tag> },
         {
-            title: '操作', render: (_: any, r: NotificationTemplate) => (
+            title: t('notifications.column.actions'), render: (_: any, r: NotificationTemplate) => (
                 <Space>
-                    <Button size="small" onClick={() => openEdit(r)}>编辑</Button>
-                    <Popconfirm title="确认删除？" onOk={() => remove(r.id)}>
-                        <Button size="small" status="danger">删除</Button>
+                    <Button size="small" onClick={() => openEdit(r)}>{t('notifications.edit')}</Button>
+                    <Popconfirm title={t('notifications.confirmDeleteTemplate')} onOk={() => remove(r.id)}>
+                        <Button size="small" status="danger">{t('notifications.delete')}</Button>
                     </Popconfirm>
                 </Space>
             ),
@@ -204,28 +206,28 @@ function TemplateTab() {
     return (
         <Card>
             <Space style={{ marginBottom: 12 }}>
-                <Button type="primary" icon={<IconPlus />} onClick={openCreate}>新建模板</Button>
-                <Button icon={<IconRefresh />} onClick={refresh}>刷新</Button>
+                <Button type="primary" icon={<IconPlus />} onClick={openCreate}>{t('notifications.newTemplate')}</Button>
+                <Button icon={<IconRefresh />} onClick={refresh}>{t('notifications.refresh')}</Button>
             </Space>
             <Spin loading={loading}>
                 <Table rowKey="id" columns={columns} data={items} pagination={false} />
             </Spin>
-            <Modal visible={modalOpen} title={editing ? '编辑模板' : '新建模板'} onOk={save} onCancel={() => setModalOpen(false)} confirmLoading={saving} style={{ width: 640 }}>
+            <Modal visible={modalOpen} title={editing ? t('notifications.editTemplate') : t('notifications.newTemplate')} onOk={save} onCancel={() => setModalOpen(false)} confirmLoading={saving} style={{ width: 640 }}>
                 <Form form={form} layout="vertical">
-                    <Form.Item label="名称" field="name" rules={[{ required: true }]}><Input /></Form.Item>
-                    <Form.Item label="事件类型" field="event_type" rules={[{ required: true }]}>
-                        <Select options={EVENT_TYPES} />
+                    <Form.Item label={t('notifications.name')} field="name" rules={[{ required: true }]}><Input /></Form.Item>
+                    <Form.Item label={t('notifications.eventType')} field="event_type" rules={[{ required: true }]}>
+                        <Select options={EVENT_TYPES.map(et => ({ label: et.label, value: et.value }))} />
                     </Form.Item>
-                    <Form.Item label="标题" field="subject" extra="支持 {{.Title}} 等占位符">
-                        <Input placeholder="[AICenter 告警] {{.Title}}" />
+                    <Form.Item label={t('notifications.templateSubject')} field="subject" extra={t('notifications.titleHint')}>
+                        <Input placeholder={t('notifications.titlePlaceholder')} />
                     </Form.Item>
-                    <Form.Item label="正文" field="body" rules={[{ required: true }]} extra="可用变量: {{.Title}} {{.Severity}} {{.Message}} {{.Data.xxx}}">
+                    <Form.Item label={t('notifications.body')} field="body" rules={[{ required: true }]} extra={t('notifications.bodyHint')}>
                         <Input.TextArea rows={5} />
                     </Form.Item>
-                    <Form.Item label="渠道类型 (JSON 数组)" field="channels">
-                        <Input placeholder='["console","webhook"]' />
+                    <Form.Item label={t('notifications.channelTypes')} field="channels">
+                        <Input placeholder={t('notifications.channelTypesPlaceholder')} />
                     </Form.Item>
-                    <Form.Item label="启用" field="is_enabled"><Switch /></Form.Item>
+                    <Form.Item label={t('notifications.enable')} field="is_enabled"><Switch /></Form.Item>
                 </Form>
             </Modal>
         </Card>
@@ -233,6 +235,7 @@ function TemplateTab() {
 }
 
 function DeliveryLogTab() {
+    const t = useT();
     const [items, setItems] = useState<DeliveryLog[]>([]);
     const [loading, setLoading] = useState(false);
     const [status, setStatus] = useState('');
@@ -244,23 +247,23 @@ function DeliveryLogTab() {
     useEffect(() => { refresh(); }, [status]);
 
     const columns = [
-        { title: '时间', dataIndex: 'created_at', render: (t: string) => <Text style={{ fontSize: 12 }}>{t}</Text> },
-        { title: '事件', dataIndex: 'event_type', render: (e?: string) => <Tag color="purple">{e || '-'}</Tag> },
-        { title: '渠道', dataIndex: 'channel_type', render: (c?: string) => c || '-' },
-        { title: '标题', dataIndex: 'subject', render: (s?: string) => s || '-' },
-        { title: '状态', dataIndex: 'status', render: (s: string) => <Tag color={STATUS_COLORS[s] || 'gray'}>{s}</Tag> },
-        { title: '错误', dataIndex: 'error_message', render: (e?: string) => e ? <Text type="error" style={{ fontSize: 12 }}>{e}</Text> : '-' },
+        { title: t('notifications.column.time'), dataIndex: 'created_at', render: (tp: string) => <Text style={{ fontSize: 12 }}>{tp}</Text> },
+        { title: t('notifications.column.event'), dataIndex: 'event_type', render: (e?: string) => <Tag color="purple">{e || '-'}</Tag> },
+        { title: t('notifications.column.channel'), dataIndex: 'channel_type', render: (c?: string) => c || '-' },
+        { title: t('notifications.column.subject'), dataIndex: 'subject', render: (s?: string) => s || '-' },
+        { title: t('notifications.column.status'), dataIndex: 'status', render: (s: string) => <Tag color={STATUS_COLORS[s] || 'gray'}>{s}</Tag> },
+        { title: t('notifications.column.error'), dataIndex: 'error_message', render: (e?: string) => e ? <Text type="error" style={{ fontSize: 12 }}>{e}</Text> : '-' },
     ];
 
     return (
         <Card>
             <Space style={{ marginBottom: 12 }}>
                 <Radio.Group type="button" value={status} onChange={(v) => setStatus(v as string)}>
-                    <Radio value="">全部</Radio>
-                    <Radio value="sent">已发送</Radio>
-                    <Radio value="failed">失败</Radio>
+                    <Radio value="">{t('notifications.all')}</Radio>
+                    <Radio value="sent">{t('notifications.sent')}</Radio>
+                    <Radio value="failed">{t('notifications.failed')}</Radio>
                 </Radio.Group>
-                <Button icon={<IconRefresh />} onClick={refresh}>刷新</Button>
+                <Button icon={<IconRefresh />} onClick={refresh}>{t('notifications.refresh')}</Button>
             </Space>
             <Spin loading={loading}>
                 <Table rowKey="id" columns={columns} data={items} pagination={{ pageSize: 20 }} />
@@ -270,6 +273,7 @@ function DeliveryLogTab() {
 }
 
 function SendTestTab() {
+    const t = useT();
     const [saving, setSaving] = useState(false);
     const [form] = Form.useForm();
     useEffect(() => {
@@ -281,25 +285,27 @@ function SendTestTab() {
         setSaving(true);
         try {
             let data: Record<string, string> | undefined;
-            if (v.data) { try { data = JSON.parse(v.data); } catch { Message.error('data 必须是合法 JSON'); return; } }
+            if (v.data) { try { data = JSON.parse(v.data); } catch { Message.error(t('notifications.dataMustBeJson')); return; } }
             await notificationApi.sendTest({ event_type: v.event_type, title: v.title, severity: v.severity, message: v.message, data });
-            Message.success('已触发发送，请到投递日志查看结果');
+            Message.success(t('notifications.testSent'));
         } finally { setSaving(false); }
     };
 
     return (
         <Card>
             <Form form={form} layout="vertical" style={{ maxWidth: 520 }}>
-                <Form.Item label="事件类型" field="event_type" rules={[{ required: true }]}><Select options={EVENT_TYPES} /></Form.Item>
-                <Form.Item label="标题" field="title" rules={[{ required: true }]}><Input /></Form.Item>
-                <Form.Item label="级别" field="severity">
+                <Form.Item label={t('notifications.eventType')} field="event_type" rules={[{ required: true }]}>
+                    <Select options={EVENT_TYPES.map(et => ({ label: et.label, value: et.value }))} />
+                </Form.Item>
+                <Form.Item label={t('notifications.templateSubject')} field="title" rules={[{ required: true }]}><Input /></Form.Item>
+                <Form.Item label={t('notifications.level')} field="severity">
                     <Select options={[{ label: 'info', value: 'info' }, { label: 'warning', value: 'warning' }, { label: 'critical', value: 'critical' }]} />
                 </Form.Item>
-                <Form.Item label="正文" field="message"><Input.TextArea rows={3} /></Form.Item>
-                <Form.Item label="附加数据 (JSON)" field="data" extra='如 {"server_id":"srv-1","value":"96.5"}'>
+                <Form.Item label={t('notifications.message')} field="message"><Input.TextArea rows={3} /></Form.Item>
+                <Form.Item label={t('notifications.data')} field="data" extra={t('notifications.dataHint')}>
                     <Input.TextArea rows={2} />
                 </Form.Item>
-                <Button type="primary" icon={<IconSend />} loading={saving} onClick={send}>发送测试</Button>
+                <Button type="primary" icon={<IconSend />} loading={saving} onClick={send}>{t('notifications.sendTest')}</Button>
             </Form>
         </Card>
     );

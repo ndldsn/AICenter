@@ -1,7 +1,7 @@
 import { Typography, Card, Grid, Space, Button } from '@arco-design/web-react';
 import { IconDesktop, IconCloud, IconRobot, IconApps } from '@arco-design/web-react/icon';
 import { useNavigate } from 'react-router-dom';
-import { useUIStore } from '@/stores/uiStore';
+import { useT } from '@/stores/uiStore';
 
 const { Title, Paragraph } = Typography;
 const { Row, Col } = Grid;
@@ -45,7 +45,7 @@ function StatCard({ title, value, icon, color }: StatCardProps) {
 
 export default function DashboardPage() {
     const navigate = useNavigate();
-    const t = useUIStore((s) => s.t);
+    const t = useT();
     return (
         <Space direction="vertical" size={20} style={{ width: '100%' }}>
             <div>

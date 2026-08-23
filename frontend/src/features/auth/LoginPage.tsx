@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Card, Form, Input, Button } from '@arco-design/web-react';
 import { authApi } from '@/services/agent';
 import { useAuthStore } from '@/stores/authStore';
-import { useUIStore } from '@/stores/uiStore';
+import { useT } from '@/stores/uiStore';
 
 export default function LoginPage() {
     const [form] = Form.useForm();
@@ -12,7 +12,7 @@ export default function LoginPage() {
     const [error, setError] = useState('');
     const setTokens = useAuthStore((s) => s.setTokens);
     const setUser = useAuthStore((s) => s.setUser);
-    const t = useUIStore((s) => s.t);
+    const t = useT();
 
     const submit = async (values: { username: string; password: string }) => {
         setError('');

@@ -7,6 +7,7 @@ import { Grid } from '@arco-design/web-react';
 const { Row, Col } = Grid;
 import { IconPlus, IconRefresh } from '@arco-design/web-react/icon';
 import { monitorApi, AlertRule, AlertEvent, Metric } from '@/services/monitor';
+import { useT } from '@/stores/uiStore';
 
 const { Title, Paragraph, Text } = Typography;
 
@@ -25,6 +26,7 @@ const CONDITIONS = [
 ];
 
 export default function MonitorDashboardPage() {
+    const t = useT();
     const [activeTab, setActiveTab] = useState('overview');
     const [latest, setLatest] = useState<Metric[]>([]);
     const [alerts, setAlerts] = useState<AlertEvent[]>([]);
@@ -77,10 +79,10 @@ export default function MonitorDashboardPage() {
         try {
             if (editingId) {
                 await monitorApi.updateRule(editingId, values);
-                Message.success('规则已更新');
+                Message.success(t('monitor.ruleUpdated'));
             } else {
                 await monitorApi.createRule(values);
-                Message.success('规则已创建');
+                Message.success(t('monitor.ruleCreated'));
             }
             setModalOpen(false);
             refresh();
@@ -91,17 +93,16 @@ export default function MonitorDashboardPage() {
 
     const onDelete = async (id: string) => {
         await monitorApi.deleteRule(id);
-        Message.success('规则已删除');
+        Message.success(t('monitor.ruleDeleted'));
         refresh();
     };
 
     const onAck = async (id: string) => {
         await monitorApi.ackAlert(id);
-        Message.success('已确认');
+        Message.success(t('monitor.acked'));
         refresh();
     };
 
-    // latest metrics per server grouped for overview cards
     const serverStats = useMemo(() => {
         const byServer: Record<string, Record<string, Metric>> = {};
         for (const m of latest) {
@@ -115,25 +116,25 @@ export default function MonitorDashboardPage() {
         <Space direction="vertical" size={16} style={{ width: '100%' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <div>
-                    <Title heading={4}>监控告警</Title>
-                    <Paragraph type="secondary">指标采集、阈值告警与事件管理</Paragraph>
+                    <Title heading={4}>{t('monitor.title')}</Title>
+                    <Paragraph type="secondary">{t('monitor.subtitle')}</Paragraph>
                 </div>
-                <Button icon={<IconRefresh />} onClick={refresh} loading={loading}>刷新</Button>
+                <Button icon={<IconRefresh />} onClick={refresh} loading={loading}>{t('monitor.refresh')}</Button>
             </div>
 
             {firingCount > 0 && (
                 <Card style={{ borderColor: 'rgb(var(--red-6))' }}>
-                    <Text type="error">⚠ 当前有 {firingCount} 条 firing 告警待处理</Text>
+                    <Text type="error">{t('monitor.firingAlerts').replace('{n}', firingCount.toString())}</Text>
                 </Card>
             )}
 
             <Tabs defaultActiveTab={activeTab} onChange={setActiveTab}>
-                <Tabs.TabPane key="overview" title="概览">
+                <Tabs.TabPane key="overview" title={t('monitor.overview')}>
                     {loading ? <Spin /> : Object.keys(serverStats).length === 0 ? (
-                        <Empty description="暂无指标数据，等待采集循环写入" />
+                        <Empty description={t('monitor.noData')} />
                     ) : (
                         Object.entries(serverStats).map(([sid, metrics]) => (
-                            <Card key={sid} title={`服务器: ${sid}`} style={{ marginBottom: 12 }}>
+                            <Card key={sid} title={t('monitor.server').replace('{id}', sid)} style={{ marginBottom: 12 }}>
                                 <Row gutter={16}>
                                     {['cpu.usage', 'memory.usage', 'disk.usage'].map(name => {
                                         const m = metrics[name];
@@ -153,32 +154,32 @@ export default function MonitorDashboardPage() {
                     )}
                 </Tabs.TabPane>
 
-                <Tabs.TabPane key="alerts" title={`告警事件 (${alerts.length})`}>
+                <Tabs.TabPane key="alerts" title={t('monitor.alertEvents').replace('{n}', alerts.length.toString())}>
                     <Table
                         loading={loading}
                         data={alerts}
                         rowKey="id"
                         pagination={{ pageSize: 10 }}
                         columns={[
-                            { title: '级别', dataIndex: 'severity', width: 90, render: (v) => <Tag color={SEVERITY_COLORS[v] || 'gray'}>{v}</Tag> },
-                            { title: '状态', dataIndex: 'status', width: 100, render: (v) => <Tag color={STATUS_COLORS[v] || 'gray'}>{v}</Tag> },
-                            { title: '服务器', dataIndex: 'server_id', width: 140 },
-                            { title: '信息', dataIndex: 'message' },
-                            { title: '触发时间', dataIndex: 'triggered_at', width: 170 },
+                            { title: t('monitor.column.severity'), dataIndex: 'severity', width: 90, render: (v) => <Tag color={SEVERITY_COLORS[v] || 'gray'}>{v}</Tag> },
+                            { title: t('monitor.column.status'), dataIndex: 'status', width: 100, render: (v) => <Tag color={STATUS_COLORS[v] || 'gray'}>{v}</Tag> },
+                            { title: t('monitor.column.server'), dataIndex: 'server_id', width: 140 },
+                            { title: t('monitor.column.message'), dataIndex: 'message' },
+                            { title: t('monitor.column.triggeredAt'), dataIndex: 'triggered_at', width: 170 },
                             {
-                                title: '操作', width: 90,
+                                title: t('monitor.column.actions'), width: 90,
                                 render: (_, record) =>
                                     record.status === 'firing' ? (
-                                        <Button size="small" type="primary" onClick={() => onAck(record.id)}>确认</Button>
+                                        <Button size="small" type="primary" onClick={() => onAck(record.id)}>{t('monitor.ack')}</Button>
                                     ) : null,
                             },
                         ]}
                     />
                 </Tabs.TabPane>
 
-                <Tabs.TabPane key="rules" title={`告警规则 (${rules.length})`}>
+                <Tabs.TabPane key="rules" title={t('monitor.alertRules').replace('{n}', rules.length.toString())}>
                     <Space style={{ marginBottom: 12 }}>
-                        <Button type="primary" icon={<IconPlus />} onClick={openCreate}>新建规则</Button>
+                        <Button type="primary" icon={<IconPlus />} onClick={openCreate}>{t('monitor.createRule')}</Button>
                     </Space>
                     <Table
                         loading={loading}
@@ -186,26 +187,26 @@ export default function MonitorDashboardPage() {
                         rowKey="id"
                         pagination={{ pageSize: 10 }}
                         columns={[
-                            { title: '名称', dataIndex: 'name' },
-                            { title: '指标', dataIndex: 'metric_name', width: 130 },
+                            { title: t('monitor.column.name'), dataIndex: 'name' },
+                            { title: t('monitor.column.metric'), dataIndex: 'metric_name', width: 130 },
                             {
-                                title: '条件', width: 150,
+                                title: t('monitor.column.condition'), width: 150,
                                 render: (_, r) => `${condSymbol(r.condition)} ${r.threshold}`,
                             },
-                            { title: '持续(s)', dataIndex: 'duration', width: 80 },
-                            { title: '级别', dataIndex: 'severity', width: 90, render: (v) => <Tag color={SEVERITY_COLORS[v]}>{v}</Tag> },
+                            { title: t('monitor.column.duration'), dataIndex: 'duration', width: 80 },
+                            { title: t('monitor.column.severity'), dataIndex: 'severity', width: 90, render: (v) => <Tag color={SEVERITY_COLORS[v]}>{v}</Tag> },
                             {
-                                title: '启用', dataIndex: 'is_enabled', width: 80,
-                                render: (v) => v ? <Tag color="green">是</Tag> : <Tag color="gray">否</Tag>,
+                                title: t('monitor.column.enabled'), dataIndex: 'is_enabled', width: 80,
+                                render: (v) => v ? <Tag color="green">{t('monitor.column.yes')}</Tag> : <Tag color="gray">{t('monitor.column.no')}</Tag>,
                             },
-                            { title: '冷却(s)', dataIndex: 'cooldown', width: 80 },
+                            { title: t('monitor.column.cooldown'), dataIndex: 'cooldown', width: 80 },
                             {
-                                title: '操作', width: 130,
+                                title: t('monitor.column.actions'), width: 130,
                                 render: (_, record) => (
                                     <Space>
-                                        <Button size="small" onClick={() => openEdit(record)}>编辑</Button>
-                                        <Popconfirm title="确认删除该规则？" onOk={() => onDelete(record.id)}>
-                                            <Button size="small" status="danger">删除</Button>
+                                        <Button size="small" onClick={() => openEdit(record)}>{t('monitor.edit')}</Button>
+                                        <Popconfirm title={t('monitor.confirmDeleteRule')} onOk={() => onDelete(record.id)}>
+                                            <Button size="small" status="danger">{t('monitor.delete')}</Button>
                                         </Popconfirm>
                                     </Space>
                                 ),
@@ -216,7 +217,7 @@ export default function MonitorDashboardPage() {
             </Tabs>
 
             <Modal
-                title={editingId ? '编辑告警规则' : '新建告警规则'}
+                title={editingId ? t('monitor.editRule') : t('monitor.createRuleTitle')}
                 visible={modalOpen}
                 onCancel={() => setModalOpen(false)}
                 onOk={onSubmit}
@@ -224,28 +225,28 @@ export default function MonitorDashboardPage() {
                 unmountOnExit
             >
                 <Form form={form} layout="vertical">
-                    <Form.Item label="规则名称" field="name" rules={[{ required: true, message: '请输入名称' }]}>
-                        <Input placeholder="如 CPU 过高" />
+                    <Form.Item label={t('monitor.ruleName')} field="name" rules={[{ required: true, message: t('monitor.enterName') }]}>
+                        <Input placeholder={t('monitor.ruleNamePlaceholder')} />
                     </Form.Item>
-                    <Form.Item label="指标" field="metric_name" rules={[{ required: true }]}>
+                    <Form.Item label={t('monitor.metric')} field="metric_name" rules={[{ required: true }]}>
                         <Select allowCreate options={METRIC_NAMES.map(m => ({ label: m, value: m }))} />
                     </Form.Item>
-                    <Form.Item label="条件" field="condition" rules={[{ required: true }]}>
+                    <Form.Item label={t('monitor.condition')} field="condition" rules={[{ required: true }]}>
                         <Select options={CONDITIONS} />
                     </Form.Item>
-                    <Form.Item label="阈值" field="threshold" rules={[{ required: true }]}>
+                    <Form.Item label={t('monitor.threshold')} field="threshold" rules={[{ required: true }]}>
                         <InputNumber style={{ width: '100%' }} step={5} />
                     </Form.Item>
-                    <Form.Item label="持续时间（秒，0 = 立即）" field="duration">
+                    <Form.Item label={t('monitor.durationSeconds')} field="duration">
                         <InputNumber style={{ width: '100%' }} min={0} step={30} />
                     </Form.Item>
-                    <Form.Item label="级别" field="severity">
+                    <Form.Item label={t('monitor.severity')} field="severity">
                         <Select options={['info', 'warning', 'critical']} />
                     </Form.Item>
-                    <Form.Item label="冷却时间（秒）" field="cooldown">
+                    <Form.Item label={t('monitor.cooldownSeconds')} field="cooldown">
                         <InputNumber style={{ width: '100%' }} min={0} step={60} />
                     </Form.Item>
-                    <Form.Item label="启用" field="is_enabled" triggerPropName="checked">
+                    <Form.Item label={t('monitor.enable')} field="is_enabled" triggerPropName="checked">
                         <Switch />
                     </Form.Item>
                 </Form>

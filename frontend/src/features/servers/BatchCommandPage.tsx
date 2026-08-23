@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useT } from '@/stores/uiStore';
 import {
     Typography, Card, Button, Input, Table, Tag, Spin, Message, Space,
 } from '@arco-design/web-react';
@@ -10,6 +11,7 @@ const { Text } = Typography;
 const { TextArea } = Input;
 
 export default function BatchCommandPage() {
+    const t = useT();
     const [command, setCommand] = useState('echo "batch from $(hostname)"');
     const [timeout, setTimeout] = useState(30);
     const [selected, setSelected] = useState<string[]>([]);
@@ -22,11 +24,11 @@ export default function BatchCommandPage() {
 
     const run = async () => {
         if (!command.trim()) {
-            Message.warning('请输入命令');
+            Message.warning(t('batch.enterCommand'));
             return;
         }
         if (selected.length === 0) {
-            Message.warning('请选择服务器');
+            Message.warning(t('batch.selectServers'));
             return;
         }
         setRunning(true);
@@ -40,25 +42,25 @@ export default function BatchCommandPage() {
             setResults(items);
             setTotal(items.length);
         } catch {
-            Message.error('批量执行失败');
+            Message.error(t('batch.executeFailed'));
         } finally {
             setRunning(false);
         }
     };
 
     const columns = [
-        { title: '服务器', dataIndex: 'server', key: 'server' },
-        { title: '地址', dataIndex: 'host', key: 'host' },
+        { title: t('batch.server'), dataIndex: 'server', key: 'server' },
+        { title: t('batch.address'), dataIndex: 'host', key: 'host' },
         {
-            title: '状态', dataIndex: 'status', key: 'status',
+            title: t('batch.status'), dataIndex: 'status', key: 'status',
             render: (v: string) => (
-                <Tag color={v === 'ok' ? 'green' : 'red'}>{v === 'ok' ? '成功' : '失败'}</Tag>
+                <Tag color={v === 'ok' ? 'green' : 'red'}>{v === 'ok' ? t('batch.success') : t('batch.failed')}</Tag>
             ),
         },
-        { title: '耗时', dataIndex: 'duration', key: 'duration' },
-        { title: '退出码', dataIndex: 'exit_code', key: 'exit_code' },
+        { title: t('batch.duration'), dataIndex: 'duration', key: 'duration' },
+        { title: t('batch.exitCode'), dataIndex: 'exit_code', key: 'exit_code' },
         {
-            title: '输出', dataIndex: 'stdout', key: 'stdout',
+            title: t('batch.output'), dataIndex: 'stdout', key: 'stdout',
             render: (v: string, r: BatchResult) => (
                 <Input.TextArea
                     value={v || r.stderr || r.error || ''}
@@ -73,10 +75,10 @@ export default function BatchCommandPage() {
     return (
         <div style={{ padding: 24 }}>
             <Space style={{ marginBottom: 16 }}>
-                <Button icon={<IconRefresh />} onClick={() => refetch()}>刷新服务器</Button>
-                <Text type="secondary">已选 {selected.length} 台 · 命令超时 {timeout}s</Text>
+                <Button icon={<IconRefresh />} onClick={() => refetch()}>{t('batch.refreshServers')}</Button>
+                <Text type="secondary">{t('batch.selected').replace('{n}', String(selected.length)).replace('{t}', String(timeout))}</Text>
             </Space>
-            <Card title="批量执行命令" style={{ marginBottom: 16 }}>
+            <Card title={t('batch.title')} style={{ marginBottom: 16 }}>
                 <TextArea
                     value={command}
                     onChange={setCommand}
@@ -94,11 +96,11 @@ export default function BatchCommandPage() {
                         style={{ width: 120 }}
                     />
                     <Button type="primary" icon={<IconPlayCircle />} loading={running} onClick={run}>
-                        {running ? '执行中...' : '执行'}
+                        {running ? t('batch.executing') : t('batch.execute')}
                     </Button>
                 </Space>
             </Card>
-            <Card title={`服务器列表 (${servers.length})`}>
+            <Card title={t('batch.serverList').replace('{n}', String(servers.length))}>
                 <Table
                     rowKey="id"
                     columns={[
@@ -114,9 +116,9 @@ export default function BatchCommandPage() {
                     pagination={false}
                 />
             </Card>
-            {running && <div style={{ padding: 24 }}><Spin tip="正在执行…" /></div>}
+            {running && <div style={{ padding: 24 }}><Spin tip={t('batch.running')} /></div>}
             {!running && results.length > 0 && (
-                <Card title={`结果 (${total})`} style={{ marginTop: 16 }}>
+                <Card title={t('batch.results').replace('{n}', String(total))} style={{ marginTop: 16 }}>
                     <Table
                         rowKey="server_id"
                         columns={columns}

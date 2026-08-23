@@ -23,7 +23,7 @@ import {
 import { useServers, useDeleteServer } from './hooks';
 import { AddServerModal } from './AddServerModal';
 import { Server } from '@/services/servers';
-import { useUIStore } from '@/stores/uiStore';
+import { useT } from '@/stores/uiStore';
 
 const { Title, Paragraph } = Typography;
 
@@ -33,7 +33,7 @@ export default function ServerListPage() {
     const [addModalVisible, setAddModalVisible] = useState(false);
     const [editingServer, setEditingServer] = useState<Server | null>(null);
     const navigate = useNavigate();
-    const t = useUIStore((s) => s.t);
+    const t = useT();
 
     const { data, isLoading, refetch } = useServers(page, limit);
     const deleteMutation = useDeleteServer();

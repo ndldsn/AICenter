@@ -1,27 +1,29 @@
 import { Typography, Card, Button, Space } from '@arco-design/web-react';
 import { IconPlus } from '@arco-design/web-react/icon';
+import { useT } from '@/stores/uiStore';
 
 const { Title, Paragraph } = Typography;
 
 export default function TaskListPage() {
+    const t = useT();
     return (
         <Space direction="vertical" size={20} style={{ width: '100%' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
-                    <Title heading={4}>任务</Title>
+                    <Title heading={4}>{t('tasks.title')}</Title>
                     <Paragraph type="secondary">
-                        定时安排和管理自动化运维任务
+                        {t('tasks.subtitle')}
                     </Paragraph>
                 </div>
                 <Button type="primary" icon={<IconPlus />}>
-                    创建任务
+                    {t('tasks.create')}
                 </Button>
             </div>
 
             <Card>
-                <Paragraph>暂无任务。</Paragraph>
+                <Paragraph>{t('tasks.empty')}</Paragraph>
                 <Paragraph type="secondary">
-                    创建定时任务来实现自动化运维。
+                    {t('tasks.hint')}
                 </Paragraph>
             </Card>
         </Space>

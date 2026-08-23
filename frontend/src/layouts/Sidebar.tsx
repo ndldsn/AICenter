@@ -13,7 +13,7 @@ import {
     IconCheck,
     IconSettings,
 } from '@arco-design/web-react/icon';
-import { useUIStore } from '@/stores/uiStore';
+import { useUIStore, useT } from '@/stores/uiStore';
 import { useAuthStore } from '@/stores/authStore';
 import { routeMeta } from '@/routes/routeConfig';
 import { useHasPermission } from '@/hooks/useHasPermission';
@@ -37,7 +37,7 @@ export function Sidebar() {
     const { sidebarCollapsed } = useUIStore();
     const { user } = useAuthStore();
     const hasPerm = useHasPermission();
-    const t = useUIStore((s) => s.t);
+    const t = useT();
     const [selectedKeys, setSelectedKeys] = useState<string[]>([location.pathname]);
 
     const visibleItems = routeMeta.filter((item) => {
@@ -99,7 +99,7 @@ export function Sidebar() {
                     <Menu.Item key={item.path}>
                         <span style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                             {iconMap[item.icon]}
-                            {!sidebarCollapsed && t(`sidebar.${item.label.toLowerCase()}`, item.label)}
+                            {!sidebarCollapsed && t(`sidebar.${item.labelKey}`, item.label)}
                         </span>
                     </Menu.Item>
                 ))}

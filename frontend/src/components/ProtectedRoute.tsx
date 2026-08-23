@@ -2,7 +2,7 @@ import { Navigate } from 'react-router-dom';
 import { useAuthStore } from '@/stores/authStore';
 import { ROUTE_PERMISSIONS, type Permission } from '@/utils/permissions';
 import { useCanAccess } from '@/hooks/useHasPermission';
-import { useUIStore } from '@/stores/uiStore';
+import { useT } from '@/stores/uiStore';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -13,7 +13,7 @@ export function ProtectedRoute({ children, path }: ProtectedRouteProps) {
   const { isAuthenticated } = useAuthStore();
   const required = ROUTE_PERMISSIONS[path];
   const can = useCanAccess((required || '') as Permission);
-  const t = useUIStore((s) => s.t);
+  const t = useT();
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;

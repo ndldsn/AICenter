@@ -14,10 +14,12 @@ import { IconPlus, IconDelete, IconEdit, IconRefresh } from '@arco-design/web-re
 import { useProviders, useDeleteProvider, useProviderModels } from './hooks';
 import AddProviderModal from './AddProviderModal';
 import ChatDrawer from './ChatDrawer';
+import { useT } from '@/stores/uiStore';
 
 const { Title, Paragraph } = Typography;
 
 export default function ModelListPage() {
+    const t = useT();
     const { data: providers, isLoading, refetch } = useProviders();
     const deleteProvider = useDeleteProvider();
     const [modalOpen, setModalOpen] = useState(false);
@@ -27,7 +29,7 @@ export default function ModelListPage() {
 
     const columns = [
         {
-            title: '名称',
+            title: t('ai.column.name'),
             dataIndex: 'display_name',
             render: (_: any, p: any) => (
                 <Space>
@@ -37,22 +39,22 @@ export default function ModelListPage() {
             ),
         },
         {
-            title: '地址',
+            title: t('ai.column.address'),
             dataIndex: 'base_url',
             render: (v: string) => <Typography.Text code>{v}</Typography.Text>,
         },
         {
-            title: 'API Key',
+            title: t('ai.column.apiKey'),
             dataIndex: 'api_key_hint',
-            render: (v: string) => (v ? <Tag color="green">{v}</Tag> : <Tag>未设置</Tag>),
+            render: (v: string) => (v ? <Tag color="green">{v}</Tag> : <Tag>{t('ai.notSet')}</Tag>),
         },
         {
-            title: '启用',
+            title: t('ai.column.enabled'),
             dataIndex: 'is_enabled',
-            render: (v: boolean) => (v ? <Tag color="green">启用</Tag> : <Tag color="gray">禁用</Tag>),
+            render: (v: boolean) => (v ? <Tag color="green">{t('ai.column.enabled')}</Tag> : <Tag color="gray">{t('common.disabled')}</Tag>),
         },
         {
-            title: '操作',
+            title: t('ai.column.actions'),
             render: (_: any, p: any) => (
                 <Space>
                     <Button
@@ -64,7 +66,7 @@ export default function ModelListPage() {
                             setModalOpen(true);
                         }}
                     >
-                        编辑
+                        {t('ai.action.edit')}
                     </Button>
                     <Button
                         size="mini"
@@ -72,15 +74,15 @@ export default function ModelListPage() {
                         icon={<IconPlus />}
                         onClick={() => setChatProvider({ id: p.id, name: p.display_name })}
                     >
-                        聊天
+                        {t('ai.action.chat')}
                     </Button>
                     <Popconfirm
-                        title="确认删除此 Provider？"
-                        content="关联模型也会被删除"
+                        title={t('ai.confirmDelete')}
+                        content={t('ai.confirmDeleteHint')}
                         onOk={() => deleteProvider.mutate(p.id)}
                     >
                         <Button size="mini" type="text" status="danger" icon={<IconDelete />}>
-                            删除
+                            {t('ai.action.delete')}
                         </Button>
                     </Popconfirm>
                 </Space>
@@ -92,14 +94,14 @@ export default function ModelListPage() {
         <Space direction="vertical" size={20} style={{ width: '100%' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
-                    <Title heading={4}>AI 模型</Title>
+                    <Title heading={4}>{t('ai.title')}</Title>
                     <Paragraph type="secondary">
-                        配置 AI Provider，供智能体和其他功能使用
+                        {t('ai.subtitle')}
                     </Paragraph>
                 </div>
                 <Space>
                     <Button icon={<IconRefresh />} onClick={() => refetch()}>
-                        刷新
+                        {t('ai.refresh')}
                     </Button>
                     <Button
                         type="primary"
@@ -109,7 +111,7 @@ export default function ModelListPage() {
                             setModalOpen(true);
                         }}
                     >
-                        添加 Provider
+                        {t('ai.addProvider')}
                     </Button>
                 </Space>
             </div>
@@ -132,7 +134,7 @@ export default function ModelListPage() {
                         pagination={false}
                     />
                 ) : (
-                    <Empty description="暂无 AI Provider，请先添加。" />
+                    <Empty description={t('ai.empty')} />
                 )}
             </Card>
 

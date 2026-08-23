@@ -6,11 +6,13 @@ import {
 import { IconArrowLeft, IconRefresh } from '@arco-design/web-react/icon';
 import { serverApi, Server } from '@/services/servers';
 import { apiPost } from '@/services/api';
+import { useT } from '@/stores/uiStore';
 import Terminal from './Terminal';
 
 const { Title, Text } = Typography;
 
 export default function ServerDetailPage() {
+    const t = useT();
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
     const [server, setServer] = useState<Server | null>(null);
@@ -26,7 +28,7 @@ export default function ServerDetailPage() {
             const r = await serverApi.get(id);
             setServer(r.data);
         } catch {
-            Message.error('加载服务器失败');
+            Message.error(t('server.detail.loading'));
         } finally {
             setLoading(false);
         }
@@ -42,7 +44,7 @@ export default function ServerDetailPage() {
             setSessionId(r.data.session_id);
             setActiveTab('terminal');
         } catch {
-            Message.error('打开终端失败');
+            Message.error(t('server.detail.openTerminalFailed'));
         } finally {
             setOpening(false);
         }
@@ -52,52 +54,52 @@ export default function ServerDetailPage() {
         return <div style={{ padding: 24 }}><Spin /></div>;
     }
     if (!server) {
-        return <div style={{ padding: 24 }}><Text>服务器不存在</Text></div>;
+        return <div style={{ padding: 24 }}><Text>{t('server.detail.notFound')}</Text></div>;
     }
 
     return (
         <div style={{ padding: 16 }}>
             <Space style={{ marginBottom: 12 }}>
-                <Button icon={<IconArrowLeft />} onClick={() => navigate('/servers')}>返回</Button>
-                <Button icon={<IconRefresh />} onClick={load}>刷新</Button>
-                <Button type="primary" loading={opening} onClick={openTerminal}>打开终端</Button>
+                <Button icon={<IconArrowLeft />} onClick={() => navigate('/servers')}>{t('server.detail.back')}</Button>
+                <Button icon={<IconRefresh />} onClick={load}>{t('server.detail.refresh')}</Button>
+                <Button type="primary" loading={opening} onClick={openTerminal}>{t('server.detail.openTerminal')}</Button>
             </Space>
             <Title heading={4}>{server.name}</Title>
             <Tabs activeTab={activeTab} onChange={setActiveTab}>
-                <Tabs.TabPane title="概览" key="overview">
+                <Tabs.TabPane title={t('server.detail.overview')} key="overview">
                     <Card>
                         <Descriptions
                             column={2}
                             data={[
-                                { label: '主机', value: `${server.host}:${server.port}` },
-                                { label: '用户名', value: server.username },
-                                { label: '认证方式', value: server.auth_type },
-                                { label: '状态', value: <Tag color={server.status === 'online' ? 'green' : 'gray'}>{server.status}</Tag> },
-                                { label: 'Agent', value: <Tag color={server.agent_connected ? 'green' : 'gray'}>{server.agent_connected ? '已连接' : '未连接'}</Tag> },
-                                { label: '标签', value: (server.tags || []).join(', ') || '-' },
+                                { label: t('server.detail.host'), value: `${server.host}:${server.port}` },
+                                { label: t('server.detail.username'), value: server.username },
+                                { label: t('server.detail.authType'), value: server.auth_type },
+                                { label: t('server.detail.status'), value: <Tag color={server.status === 'online' ? 'green' : 'gray'}>{server.status}</Tag> },
+                                { label: t('server.detail.agent'), value: <Tag color={server.agent_connected ? 'green' : 'gray'}>{server.agent_connected ? t('server.detail.connected') : t('server.detail.disconnected')}</Tag> },
+                                { label: t('server.detail.tags'), value: (server.tags || []).join(', ') || '-' },
                             ]}
                         />
                         {server.os_info && (
                             <Descriptions
                                 column={2} style={{ marginTop: 12 }}
                                 data={[
-                                    { label: '发行版', value: server.os_info.distribution },
-                                    { label: '内核', value: server.os_info.kernel },
-                                    { label: '架构', value: server.os_info.architecture },
-                                    { label: '主机名', value: server.os_info.hostname },
+                                    { label: t('server.detail.distribution'), value: server.os_info.distribution },
+                                    { label: t('server.detail.kernel'), value: server.os_info.kernel },
+                                    { label: t('server.detail.architecture'), value: server.os_info.architecture },
+                                    { label: t('server.detail.hostname'), value: server.os_info.hostname },
                                 ]}
                             />
                         )}
                     </Card>
                 </Tabs.TabPane>
-                <Tabs.TabPane title="终端" key="terminal">
+                <Tabs.TabPane title={t('server.detail.terminal')} key="terminal">
                     <Card>
                         {sessionId ? (
                             <div style={{ height: '60vh' }}>
                                 <Terminal sessionId={sessionId} />
                             </div>
                         ) : (
-                            <Text type="secondary">点击「打开终端」启动一个 PTY 会话。</Text>
+                            <Text type="secondary">{t('server.detail.startPtyHint')}</Text>
                         )}
                     </Card>
                 </Tabs.TabPane>

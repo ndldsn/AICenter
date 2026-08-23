@@ -1,21 +1,23 @@
 import { Typography, Card, Space } from '@arco-design/web-react';
+import { useT } from '@/stores/uiStore';
 
 const { Title, Paragraph } = Typography;
 
 export default function AuditLogPage() {
+    const t = useT();
     return (
         <Space direction="vertical" size={20} style={{ width: '100%' }}>
             <div>
-                <Title heading={4}>审计日志</Title>
+                <Title heading={4}>{t('audit.title')}</Title>
                 <Paragraph type="secondary">
-                    所有操作与变更的完整历史记录
+                    {t('audit.subtitle')}
                 </Paragraph>
             </div>
 
             <Card>
-                <Paragraph>暂无审计日志。</Paragraph>
+                <Paragraph>{t('audit.empty')}</Paragraph>
                 <Paragraph type="secondary">
-                    所有操作都会被记录在这里，用于合规与安全审计。
+                    {t('audit.hint')}
                 </Paragraph>
             </Card>
         </Space>

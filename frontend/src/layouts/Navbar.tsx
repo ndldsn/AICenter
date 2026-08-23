@@ -7,16 +7,15 @@ import {
     IconUser,
     IconPoweroff,
     IconSettings,
-    IconLanguage,
 } from '@arco-design/web-react/icon';
-import { useUIStore } from '@/stores/uiStore';
+import { useUIStore, useT } from '@/stores/uiStore';
 import { useAuthStore } from '@/stores/authStore';
 
 export function Navbar() {
     const navigate = useNavigate();
-    const { theme, toggleTheme } = useUIStore();
+    const { theme, toggleTheme, locale } = useUIStore();
     const { user, logout } = useAuthStore();
-    const t = useUIStore((s) => s.t);
+    const t = useT();
 
     const handleLogout = () => {
         logout();
@@ -64,10 +63,11 @@ export function Navbar() {
 
                 {/* Language toggle */}
                 <Button
-                    icon={<IconLanguage />}
                     shape="circle"
                     onClick={() => useUIStore.getState().toggleLocale()}
-                />
+                >
+                    {locale === 'zh-CN' ? '中' : 'EN'}
+                </Button>
 
                 {/* Notifications */}
                 <Badge count={0} dot>
