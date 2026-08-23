@@ -1,5 +1,6 @@
-import { Typography, Card, Grid, Space, Tag } from '@arco-design/web-react';
+import { Typography, Card, Grid, Space, Button } from '@arco-design/web-react';
 import { IconDesktop, IconCloud, IconRobot, IconApps } from '@arco-design/web-react/icon';
+import { useNavigate } from 'react-router-dom';
 
 const { Title, Paragraph } = Typography;
 const { Row, Col } = Grid;
@@ -42,6 +43,7 @@ function StatCard({ title, value, icon, color }: StatCardProps) {
 }
 
 export default function DashboardPage() {
+    const navigate = useNavigate();
     return (
         <Space direction="vertical" size={20} style={{ width: '100%' }}>
             <div>
@@ -55,7 +57,7 @@ export default function DashboardPage() {
             <Row gutter={16}>
                 <Col span={6}>
                     <StatCard
-                        title="Servers"
+                        title="服务器"
                         value={0}
                         icon={<IconDesktop />}
                         color="rgb(var(--primary-6))"
@@ -63,7 +65,7 @@ export default function DashboardPage() {
                 </Col>
                 <Col span={6}>
                     <StatCard
-                        title="Containers"
+                        title="容器"
                         value={0}
                         icon={<IconCloud />}
                         color="rgb(var(--success-6))"
@@ -71,7 +73,7 @@ export default function DashboardPage() {
                 </Col>
                 <Col span={6}>
                     <StatCard
-                        title="AI Agents"
+                        title="智能体"
                         value={0}
                         icon={<IconRobot />}
                         color="rgb(var(--warning-6))"
@@ -79,7 +81,7 @@ export default function DashboardPage() {
                 </Col>
                 <Col span={6}>
                     <StatCard
-                        title="AI Models"
+                        title="AI 模型"
                         value={0}
                         icon={<IconApps />}
                         color="rgb(var(--orange-6))"
@@ -90,18 +92,18 @@ export default function DashboardPage() {
             {/* Quick Actions */}
             <Card title="快速操作">
                 <Space>
-                    <Tag color="arcoblue" bordered>
+                    <Button size="small" type="outline" onClick={() => navigate('/servers')}>
                         添加服务器
-                    </Tag>
-                    <Tag color="green" bordered>
+                    </Button>
+                    <Button size="small" type="outline" onClick={() => navigate('/docker')}>
                         部署容器
-                    </Tag>
-                    <Tag color="orange" bordered>
+                    </Button>
+                    <Button size="small" type="outline" onClick={() => navigate('/agents')}>
                         创建智能体
-                    </Tag>
-                    <Tag color="purple" bordered>
+                    </Button>
+                    <Button size="small" type="outline" onClick={() => navigate('/ai')}>
                         添加 Provider
-                    </Tag>
+                    </Button>
                 </Space>
             </Card>
 

@@ -1,5 +1,4 @@
 import axios from 'axios';
-import type { ApiError } from './api';
 
 const api = axios.create({
     baseURL: 'http://127.0.0.1:8081/api/v1',
@@ -21,7 +20,6 @@ api.interceptors.request.use((config) => {
 // Response interceptor - handle errors
 api.interceptors.response.use((response) => response.data, (error) => {
     const status = error.response?.status;
-    const data = error.response?.data as ApiError | undefined;
     if (status === 401) {
         localStorage.removeItem('access_token');
         localStorage.removeItem('refresh_token');
