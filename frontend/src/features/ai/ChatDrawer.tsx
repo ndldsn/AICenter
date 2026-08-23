@@ -90,7 +90,7 @@ export default function ChatDrawer({ provider, onClose }: Props) {
 
     return (
         <Drawer
-            title={`Chat · ${provider?.name || ''}`}
+            title={`对话 · ${provider?.name || ''}`}
             visible={!!provider}
             onCancel={onClose}
             width={680}
@@ -100,7 +100,7 @@ export default function ChatDrawer({ provider, onClose }: Props) {
                 <Space direction="vertical" size={12} style={{ width: '100%' }}>
                     <Select
                         style={{ width: '100%' }}
-                        placeholder="Select model"
+                        placeholder="选择模型"
                         value={modelId}
                         onChange={setModelId}
                         options={(models || []).map((m: any) => ({
@@ -120,7 +120,7 @@ export default function ChatDrawer({ provider, onClose }: Props) {
                         }}
                     >
                         {messages.length === 0 ? (
-                            <Empty description="Start a conversation" />
+                            <Empty description="开始对话" />
                         ) : (
                             messages.map((m, idx) => (
                                 <div
@@ -131,7 +131,7 @@ export default function ChatDrawer({ provider, onClose }: Props) {
                                     }}
                                 >
                                     <Typography.Text type={m.role === 'user' ? 'primary' : undefined}>
-                                        {m.role === 'user' ? 'You: ' : 'AI: '}
+                                        {m.role === 'user' ? '你: ' : 'AI: '}
                                     </Typography.Text>
                                     <div
                                         style={{
@@ -153,7 +153,7 @@ export default function ChatDrawer({ provider, onClose }: Props) {
 
                     <div style={{ display: 'flex', gap: 8 }}>
                         <Input
-                            placeholder="Type a message..."
+                            placeholder="输入消息..."
                             value={input}
                             onChange={setInput}
                             onPressEnter={handleSend}
@@ -166,7 +166,7 @@ export default function ChatDrawer({ provider, onClose }: Props) {
                             onClick={handleSend}
                             loading={loading}
                         >
-                            Send
+                            发送
                         </Button>
                     </div>
                 </Space>

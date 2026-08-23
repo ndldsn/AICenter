@@ -9,10 +9,10 @@ import {
 import { useProvider, useCreateProvider, useUpdateProvider } from './hooks';
 
 const PROVIDER_TYPES = [
-    { label: 'OpenAI Compatible', value: 'openai-compatible' },
+    { label: 'OpenAI 兼容', value: 'openai-compatible' },
     { label: 'Anthropic', value: 'anthropic' },
     { label: 'Gemini', value: 'gemini' },
-    { label: 'Mock (dev)', value: 'mock' },
+    { label: 'Mock (开发)', value: 'mock' },
 ];
 
 interface Props {
@@ -59,38 +59,38 @@ export default function AddProviderModal({ open, editingId, onClose }: Props) {
 
     return (
         <Modal
-            title={editingId ? 'Edit Provider' : 'Add Provider'}
+            title={editingId ? '编辑 Provider' : '添加 Provider'}
             visible={open}
             onOk={handleSubmit}
             onCancel={onClose}
-            okText={editingId ? 'Update' : 'Create'}
+            okText={editingId ? '更新' : '创建'}
             confirmLoading={pending}
             style={{ width: 520 }}
         >
             <Form form={form} layout="vertical">
-                <Form.Item label="Name" field="name" rules={[{ required: true, message: 'Name is required' }]}>
+                <Form.Item label="名称" field="name" rules={[{ required: true, message: '名称为必填' }]}>
                     <Input placeholder="openai" />
                 </Form.Item>
-                <Form.Item label="Display Name" field="display_name" rules={[{ required: true }]}>
+                <Form.Item label="显示名称" field="display_name" rules={[{ required: true }]}>
                     <Input placeholder="OpenAI" />
                 </Form.Item>
-                <Form.Item label="Type" field="api_type" rules={[{ required: true }]}>
+                <Form.Item label="类型" field="api_type" rules={[{ required: true }]}>
                     <Select options={PROVIDER_TYPES} />
                 </Form.Item>
-                <Form.Item label="Base URL" field="base_url" rules={[{ required: true }]}>
+                <Form.Item label="地址" field="base_url" rules={[{ required: true }]}>
                     <Input placeholder="https://api.openai.com/v1" />
                 </Form.Item>
                 <Form.Item
                     label="API Key"
                     field="api_key_enc"
-                    extra="Leave empty to keep existing key when editing"
+                    extra="编辑时留空则保留现有密钥"
                 >
                     <Input.Password placeholder="sk-..." />
                 </Form.Item>
-                <Form.Item label="Enabled" field="is_enabled">
+                <Form.Item label="启用" field="is_enabled">
                     <Switch />
                 </Form.Item>
-                <Form.Item label="Default" field="is_default">
+                <Form.Item label="默认" field="is_default">
                     <Switch />
                 </Form.Item>
             </Form>

@@ -6,16 +6,16 @@ export default function AuditLogPage() {
     return (
         <Space direction="vertical" size={20} style={{ width: '100%' }}>
             <div>
-                <Title heading={4}>Audit Log</Title>
+                <Title heading={4}>审计日志</Title>
                 <Paragraph type="secondary">
-                    Complete history of all operations and changes
+                    所有操作与变更的完整历史记录
                 </Paragraph>
             </div>
 
             <Card>
-                <Paragraph>No audit logs yet.</Paragraph>
+                <Paragraph>暂无审计日志。</Paragraph>
                 <Paragraph type="secondary">
-                    All operations will be recorded here for compliance and security.
+                    所有操作都会被记录在这里，用于合规与安全审计。
                 </Paragraph>
             </Card>
         </Space>

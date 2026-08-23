@@ -6,16 +6,16 @@ export default function PendingApprovalPage() {
     return (
         <Space direction="vertical" size={20} style={{ width: '100%' }}>
             <div>
-                <Title heading={4}>Approvals</Title>
+                <Title heading={4}>待审批</Title>
                 <Paragraph type="secondary">
-                    Review and approve high-risk operations
+                    审查并批准高风险操作
                 </Paragraph>
             </div>
 
             <Card>
-                <Paragraph>No pending approvals.</Paragraph>
+                <Paragraph>暂无待审批项。</Paragraph>
                 <Paragraph type="secondary">
-                    When AI agents request high-risk operations, they will appear here for your review.
+                    当 AI 智能体请求执行高风险操作时，会在这里展示供你审核。
                 </Paragraph>
             </Card>
         </Space>

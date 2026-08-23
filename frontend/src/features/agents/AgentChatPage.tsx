@@ -192,7 +192,7 @@ export default function AgentChatPage() {
     }, [refreshSessions]);
 
     if (!agent) {
-        return <Card style={{ padding: 60 }}><Empty description="Agent not found" /></Card>;
+        return <Card style={{ padding: 60 }}><Empty description="未找到智能体" /></Card>;
     }
 
     return (
@@ -214,8 +214,8 @@ export default function AgentChatPage() {
                                     await openSession(s.id);
                                 }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                    <Text ellipsis style={{ maxWidth: 140 }}>{s.title || 'untitled'}</Text>
-                                    <Tag size="small" color={s.status === 'active' ? 'green' : 'gray'}>{s.status}</Tag>
+                                    <Text ellipsis style={{ maxWidth: 140 }}>{s.title || '未命名'}</Text>
+                                    <Tag size="small" color={s.status === 'active' ? 'green' : 'gray'}>{s.status === 'active' ? '进行中' : s.status}</Tag>
                                 </div>
                                 <Text type="secondary" style={{ fontSize: 12 }}>{new Date(s.started_at).toLocaleString()}</Text>
                             </Card>
@@ -228,7 +228,7 @@ export default function AgentChatPage() {
             <div className="agent-chat-main">
                 <Card
                     title={<Space><IconRobot /> {agent.name} <Tag size="small">{agent.tool_permission_mode}</Tag></Space>}
-                    extra={<Space><Text>Model: {agent.model_id}</Text><Text>Temp: {agent.temperature}</Text><Text>Iter: {agent.max_iterations}</Text></Space>}
+                    extra={<Space><Text>模型: {agent.model_id}</Text><Text>温度: {agent.temperature}</Text><Text>迭代: {agent.max_iterations}</Text></Space>}
                 >
                     <div className="agent-chat-messages">
                         {messages.length === 0 && (
@@ -238,20 +238,20 @@ export default function AgentChatPage() {
                             <div key={m.id} className={`chat-bubble ${m.role}`}>
                                 <div className="chat-bubble-header">
                                     <Tag size="small" color={m.role === 'user' ? 'blue' : m.role === 'assistant' ? 'purple' : 'orange'}>
-                                        {m.role}
+                                        {m.role === 'user' ? '用户' : m.role === 'assistant' ? '助手' : '工具'}
                                     </Tag>
                                     {m.tool_name && <Tag size="small">{m.tool_name}</Tag>}
                                     {m.meta?.phase && <Text type="secondary" style={{ fontSize: 12 }}>{m.meta.phase}</Text>}
                                 </div>
                                 {m.content && <div className="chat-bubble-body">{m.content}</div>}
-                                {m.tool_args && <div className="chat-bubble-code">args: {JSON.stringify(m.tool_args)}</div>}
-                                {m.tool_result && <div className="chat-bubble-code">result: {JSON.stringify(m.tool_result)}</div>}
+                                {m.tool_args && <div className="chat-bubble-code">参数: {JSON.stringify(m.tool_args)}</div>}
+                                {m.tool_result && <div className="chat-bubble-code">结果: {JSON.stringify(m.tool_result)}</div>}
                                 {m.meta?.status && (
                                     <div className="chat-bubble-footer">
                                         <Tag size="small" icon={m.meta.status === 'done' || m.meta.status === 'ok' ? <IconCheckCircle /> : m.meta.status === 'denied' ? <IconCloseCircle /> : <IconClockCircle />}>
                                             {m.meta.status}
                                         </Tag>
-                                        {m.meta.approval_id && <Tag color="red" size="small">pending approval</Tag>}
+                                        {m.meta.approval_id && <Tag color="red" size="small">待审批</Tag>}
                                     </div>
                                 )}
                             </div>
@@ -263,7 +263,7 @@ export default function AgentChatPage() {
                     <div className="agent-chat-input">
                         <Space>
                             <Input.Search
-                                placeholder="Ask the agent... e.g. 'list servers' or 'restart nginx'"
+                                placeholder="输入问题，例如：'list servers' 或 'restart nginx'"
                                 value={input}
                                 onChange={setInput}
                                 onSearch={send}
