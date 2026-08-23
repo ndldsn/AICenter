@@ -1,6 +1,7 @@
 import { lazy } from 'react';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { ROUTE_PERMISSIONS } from '@/utils/permissions';
+import LoginPage from '@/features/auth/LoginPage';
 import AgentChatPage from '@/features/agents/AgentChatPage';
 
 const DashboardPage = lazy(() => import('@/features/dashboard/DashboardPage'));
@@ -25,22 +26,24 @@ export interface RouteMeta {
 }
 
 export const routeMeta: RouteMeta[] = [
-    { path: '/', label: 'Dashboard', icon: 'dashboard', permission: ROUTE_PERMISSIONS['/'] },
-    { path: '/servers', label: 'Servers', icon: 'server', permission: ROUTE_PERMISSIONS['/servers'] },
-    { path: '/servers/batch', label: 'Batch', icon: 'cluster', permission: ROUTE_PERMISSIONS['/servers/batch'] },
-    { path: '/servers/:id', label: 'Server Detail', icon: 'server', permission: ROUTE_PERMISSIONS['/servers'] },
-    { path: '/docker', label: 'Docker', icon: 'docker', permission: ROUTE_PERMISSIONS['/docker'] },
-    { path: '/models', label: 'AI Models', icon: 'apps', permission: ROUTE_PERMISSIONS['/models'] },
-    { path: '/agents', label: 'Agents', icon: 'robot', permission: ROUTE_PERMISSIONS['/agents'] },
-    { path: '/tasks', label: 'Tasks', icon: 'calendar', permission: ROUTE_PERMISSIONS['/tasks'] },
-    { path: '/monitor', label: 'Monitor', icon: 'eye', permission: ROUTE_PERMISSIONS['/monitor'] },
-    { path: '/notifications', label: 'Notifications', icon: 'notification', permission: ROUTE_PERMISSIONS['/notifications'] },
-    { path: '/approvals', label: 'Approvals', icon: 'check', permission: ROUTE_PERMISSIONS['/approvals'] },
-    { path: '/audit', label: 'Audit Log', icon: 'file', permission: ROUTE_PERMISSIONS['/audit'] },
-    { path: '/settings', label: 'Settings', icon: 'settings', permission: ROUTE_PERMISSIONS['/settings'] },
+    { path: '/', label: '仪表盘', icon: 'dashboard', permission: ROUTE_PERMISSIONS['/'] },
+    { path: '/servers', label: '服务器', icon: 'server', permission: ROUTE_PERMISSIONS['/servers'] },
+    { path: '/servers/batch', label: '批量操作', icon: 'cluster', permission: ROUTE_PERMISSIONS['/servers/batch'] },
+    { path: '/servers/:id', label: '服务器详情', icon: 'server', permission: ROUTE_PERMISSIONS['/servers'] },
+    { path: '/docker', label: '容器', icon: 'docker', permission: ROUTE_PERMISSIONS['/docker'] },
+    { path: '/models', label: 'AI 模型', icon: 'apps', permission: ROUTE_PERMISSIONS['/models'] },
+    { path: '/agents', label: '智能体', icon: 'robot', permission: ROUTE_PERMISSIONS['/agents'] },
+    { path: '/agents/:id/chat', label: '智能体对话', icon: 'robot', permission: ROUTE_PERMISSIONS['/agents'] },
+    { path: '/tasks', label: '任务', icon: 'calendar', permission: ROUTE_PERMISSIONS['/tasks'] },
+    { path: '/monitor', label: '监控', icon: 'eye', permission: ROUTE_PERMISSIONS['/monitor'] },
+    { path: '/notifications', label: '通知', icon: 'notification', permission: ROUTE_PERMISSIONS['/notifications'] },
+    { path: '/approvals', label: '待审批', icon: 'check', permission: ROUTE_PERMISSIONS['/approvals'] },
+    { path: '/audit', label: '审计日志', icon: 'file', permission: ROUTE_PERMISSIONS['/audit'] },
+    { path: '/settings', label: '设置', icon: 'settings', permission: ROUTE_PERMISSIONS['/settings'] },
 ];
 
 export const routesConfig = [
+    { path: '/login', element: <LoginPage /> },
     { path: '/', element: <ProtectedRoute path="/"><DashboardPage /></ProtectedRoute> },
     { path: '/servers', element: <ProtectedRoute path="/servers"><ServerListPage /></ProtectedRoute> },
     { path: '/servers/batch', element: <ProtectedRoute path="/servers/batch"><BatchCommandPage /></ProtectedRoute> },

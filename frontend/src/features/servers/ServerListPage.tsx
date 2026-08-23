@@ -46,7 +46,7 @@ export default function ServerListPage() {
 
     const columns = [
         {
-            title: 'Name',
+            title: '名称',
             dataIndex: 'name',
             render: (name: string, record: Server) => (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -63,7 +63,7 @@ export default function ServerListPage() {
             ),
         },
         {
-            title: 'Status',
+            title: '状态',
             dataIndex: 'status',
             render: (status: string, _record: Server) => {
                 const statusConfig: Record<string, { color: string; label: string }> = {
@@ -99,7 +99,7 @@ export default function ServerListPage() {
             dataIndex: 'agent_connected',
             render: (connected: boolean) => (
                 <Tag color={connected ? 'green' : 'gray'}>
-                    {connected ? 'Connected' : 'Disconnected'}
+                    {connected ? '已连接' : '未连接'}
                 </Tag>
             ),
         },
@@ -128,10 +128,10 @@ export default function ServerListPage() {
             },
         },
         {
-            title: 'Last Seen',
+            title: '最近在线',
             dataIndex: 'last_heartbeat',
             render: (heartbeat: string | undefined) => {
-                if (!heartbeat) return <span style={{ color: 'var(--color-text-3)' }}>Never</span>;
+                if (!heartbeat) return <span style={{ color: 'var(--color-text-3)' }}>从未</span>;
                 return (
                     <span>
                         {new Date(heartbeat).toLocaleString('zh-CN', {
@@ -145,18 +145,18 @@ export default function ServerListPage() {
             },
         },
         {
-            title: 'Actions',
+            title: '操作',
             dataIndex: 'id',
             render: (id: string, record: Server) => (
                 <Space>
-                    <Tooltip content="Test Connection">
+                    <Tooltip content="测试连接">
                         <Button
                             size="small"
                             icon={<IconPlayCircle />}
-                            onClick={() => Message.info('Testing connection...')}
+                            onClick={() => Message.info('正在测试连接...')}
                         />
                     </Tooltip>
-                    <Tooltip content="Edit">
+                    <Tooltip content="编辑">
                         <Button
                             size="small"
                             icon={<IconEdit />}
@@ -166,22 +166,22 @@ export default function ServerListPage() {
                             }}
                         />
                     </Tooltip>
-                    <Tooltip content="Copy SSH Command">
+                    <Tooltip content="复制 SSH 命令">
                         <Button
                             size="small"
                             icon={<IconCopy />}
                             onClick={() => {
                                 const cmd = `ssh ${record.username}@${record.host} -p ${record.port}`;
                                 navigator.clipboard.writeText(cmd);
-                                Message.success('SSH command copied');
+                                Message.success('SSH 命令已复制');
                             }}
                         />
                     </Tooltip>
                     <Popconfirm
-                        title="Delete this server?"
+                        title="确定删除该服务器？"
                         onOk={() => handleDelete(id)}
-                        okText="Delete"
-                        cancelText="Cancel"
+                        okText="删除"
+                        cancelText="取消"
                     >
                         <Button size="small" icon={<IconDelete />} status="danger" />
                     </Popconfirm>
@@ -194,14 +194,14 @@ export default function ServerListPage() {
         <Space direction="vertical" size={20} style={{ width: '100%' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
-                    <Title heading={4}>Servers</Title>
+                    <Title heading={4}>服务器</Title>
                     <Paragraph type="secondary">
-                        Manage your Linux servers and monitor their status
+                        管理你的 Linux 服务器并监控其状态
                     </Paragraph>
                 </div>
                 <Space>
                     <Button icon={<IconRefresh />} onClick={() => refetch()}>
-                        Refresh
+                        刷新
                     </Button>
                     <Button
                         type="primary"
@@ -211,7 +211,7 @@ export default function ServerListPage() {
                             setAddModalVisible(true);
                         }}
                     >
-                        Add Server
+                        添加服务器
                     </Button>
                 </Space>
             </div>
@@ -226,13 +226,13 @@ export default function ServerListPage() {
                         current: page,
                         pageSize: limit,
                         onChange: (p) => setPage(p),
-                        showTotal: (total) => `Total ${total} servers`,
+                        showTotal: (total) => `共 ${total} 台服务器`,
                         showJumper: true,
                         sizeCanChange: true,
                     }}
                     noDataElement={
                         <div style={{ padding: 40, textAlign: 'center', color: 'var(--color-text-3)' }}>
-                            No servers yet. Click 'Add Server' to get started.
+                            暂无服务器，点击“添加服务器”开始。
                         </div>
                     }
                     rowKey="id"

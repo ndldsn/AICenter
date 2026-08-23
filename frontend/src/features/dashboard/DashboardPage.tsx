@@ -45,9 +45,9 @@ export default function DashboardPage() {
     return (
         <Space direction="vertical" size={20} style={{ width: '100%' }}>
             <div>
-                <Title heading={4}>Dashboard</Title>
+                <Title heading={4}>仪表盘</Title>
                 <Paragraph type="secondary">
-                    Welcome to AICenter - Your AI-powered operations control center
+                    欢迎使用 AICenter - 你的 AI 运维控制中心
                 </Paragraph>
             </div>
 
@@ -88,30 +88,30 @@ export default function DashboardPage() {
             </Row>
 
             {/* Quick Actions */}
-            <Card title="Quick Actions">
+            <Card title="快速操作">
                 <Space>
                     <Tag color="arcoblue" bordered>
-                        Add Server
+                        添加服务器
                     </Tag>
                     <Tag color="green" bordered>
-                        Deploy Container
+                        部署容器
                     </Tag>
                     <Tag color="orange" bordered>
-                        Create Agent
+                        创建智能体
                     </Tag>
                     <Tag color="purple" bordered>
-                        Add Provider
+                        添加 Provider
                     </Tag>
                 </Space>
             </Card>
 
             {/* System Status */}
-            <Card title="System Status">
+            <Card title="系统状态">
                 <Paragraph>
-                    AICenter is running. No servers connected yet.
+                    AICenter 运行中。尚未连接任何服务器。
                 </Paragraph>
                 <Paragraph type="secondary">
-                    Add your first server to start monitoring and managing your infrastructure.
+                    添加第一台服务器即可开始监控和管理基础设施。
                 </Paragraph>
             </Card>
         </Space>

@@ -25,15 +25,15 @@ export default function DockerDashboardPage() {
                 <div>
                     <Title heading={4}>Docker</Title>
                     <Paragraph type="secondary">
-                        Manage containers, images, volumes, networks, and compose projects
+                        管理容器、镜像、卷、网络和 Compose 项目
                     </Paragraph>
                 </div>
                 <Space>
                     <Tag color={connected ? 'green' : 'red'} style={{ marginRight: 0 }}>
-                        {connected ? 'Live' : 'Connecting…'}
+                        {connected ? '已连接' : '连接中…'}
                     </Tag>
                     <Button icon={<IconRefresh />} onClick={() => refetchHosts()}>
-                        Refresh
+                        刷新
                     </Button>
                 </Space>
             </div>
@@ -47,25 +47,25 @@ export default function DockerDashboardPage() {
                             padding: '12px 16px',
                         }}
                     >
-                        <div style={{ fontSize: 12, color: 'var(--color-text-3)' }}>Hosts</div>
+                        <div style={{ fontSize: 12, color: 'var(--color-text-3)' }}>主机</div>
                         <div style={{ fontSize: 20, fontWeight: 600 }}>
-                            {onlineHosts} / {hosts?.length ?? 0} online
+                            {onlineHosts} / {hosts?.length ?? 0} 在线
                         </div>
                     </div>
                 </Grid.Col>
             </Grid.Row>
 
             <Tabs activeTab={activeTab} onChange={setActiveTab}>
-                <Tabs.TabPane key="containers" title="Containers">
+                <Tabs.TabPane key="containers" title="容器">
                     <ContainerTab />
                 </Tabs.TabPane>
-                <Tabs.TabPane key="images" title="Images">
+                <Tabs.TabPane key="images" title="镜像">
                     <ImageTab />
                 </Tabs.TabPane>
-                <Tabs.TabPane key="volumes" title="Volumes">
+                <Tabs.TabPane key="volumes" title="卷">
                     <VolumeTab />
                 </Tabs.TabPane>
-                <Tabs.TabPane key="networks" title="Networks">
+                <Tabs.TabPane key="networks" title="网络">
                     <NetworkTab />
                 </Tabs.TabPane>
                 <Tabs.TabPane key="compose" title="Compose">

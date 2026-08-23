@@ -182,7 +182,7 @@ export default function AgentListPage() {
 
     const columns = [
         {
-            title: 'Agent',
+            title: '智能体',
             dataIndex: 'name',
             render: (_: any, r: Agent) => (
                 <Space>

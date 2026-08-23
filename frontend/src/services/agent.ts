@@ -59,6 +59,12 @@ export interface ApprovalRequest {
     created_at: string;
 }
 
+export interface AuthLoginResponse {
+    access_token: string;
+    refresh_token?: string;
+    user?: any;
+}
+
 const api = {
     listAgents: (enabled?: boolean) =>
         apiGet<{ code: number; data: { items: Agent[]; total: number } }>(
@@ -80,9 +86,7 @@ const api = {
             `/agents/sessions${agentId ? `?agent_id=${agentId}` : ''}`
         ).then(r => r.data),
     getSession: (id: string) =>
-        apiGet<{ code: number; data: { session: AgentSession; messages: AgentMessage[] } }>(
-            `/agents/sessions/${id}`
-        ).then(r => r.data),
+        apiGet<{ code: number; data: { session: AgentSession; messages: AgentMessage[] } }>(`/agents/sessions/${id}`).then(r => r.data),
     sendMessage: (sessionId: string, message: string) =>
         apiPost<{ code: number; data: any }>(`/agents/sessions/${sessionId}/messages`, { message }),
 
@@ -96,6 +100,13 @@ const api = {
         apiPost(`/approvals/${id}/approve`, {}).then(r => r),
     reject: (id: string) =>
         apiPost(`/approvals/${id}/reject`, {}).then(r => r),
+};
+
+export const authApi = {
+    login: (body: { username: string; password: string }) =>
+        apiPost<{ code: number; data: AuthLoginResponse }>('/auth/login', body).then(r => r.data),
+    me: () =>
+        apiGet<{ code: number; data: any }>('/auth/me').then(r => r.data),
 };
 
 export { api as agentApi };

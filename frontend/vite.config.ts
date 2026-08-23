@@ -21,11 +21,16 @@ export default defineConfig(({ mode }) => {
             strictPort: true,
             proxy: {
                 '/api': {
-                    target: env.VITE_API_URL || 'http://localhost:8080',
+                    target: env.VITE_API_URL || 'http://127.0.0.1:8081',
                     changeOrigin: true,
+                    configure: (proxy) => {
+                        proxy.on('proxyReq', (proxyReq) => {
+                            proxyReq.setHeader('x-forwarded-proto', 'http');
+                        });
+                    },
                 },
                 '/ws': {
-                    target: env.VITE_WS_URL || 'ws://localhost:8080',
+                    target: env.VITE_WS_URL || 'ws://127.0.0.1:8081',
                     ws: true,
                     changeOrigin: true,
                 },

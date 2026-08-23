@@ -12,10 +12,10 @@ const { Title, Text } = Typography;
 
 const CHANNEL_TYPE_LABELS: Record<ChannelType, string> = {
     webhook: 'Webhook',
-    email: 'Email',
-    sms: 'SMS',
+    email: '邮件',
+    sms: '短信',
     im: 'IM',
-    console: 'Console (dev)',
+    console: '控制台 (开发)',
 };
 
 const CHANNEL_TYPES: ChannelType[] = ['webhook', 'email', 'sms', 'im', 'console'];

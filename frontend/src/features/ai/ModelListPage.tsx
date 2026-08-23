@@ -27,7 +27,7 @@ export default function ModelListPage() {
 
     const columns = [
         {
-            title: 'Name',
+            title: '名称',
             dataIndex: 'display_name',
             render: (_: any, p: any) => (
                 <Space>
@@ -37,7 +37,7 @@ export default function ModelListPage() {
             ),
         },
         {
-            title: 'Base URL',
+            title: '地址',
             dataIndex: 'base_url',
             render: (v: string) => <Typography.Text code>{v}</Typography.Text>,
         },
@@ -47,12 +47,12 @@ export default function ModelListPage() {
             render: (v: string) => (v ? <Tag color="green">{v}</Tag> : <Tag>未设置</Tag>),
         },
         {
-            title: 'Enabled',
+            title: '启用',
             dataIndex: 'is_enabled',
             render: (v: boolean) => (v ? <Tag color="green">启用</Tag> : <Tag color="gray">禁用</Tag>),
         },
         {
-            title: 'Actions',
+            title: '操作',
             render: (_: any, p: any) => (
                 <Space>
                     <Button
@@ -92,14 +92,14 @@ export default function ModelListPage() {
         <Space direction="vertical" size={20} style={{ width: '100%' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
-                    <Title heading={4}>AI Providers</Title>
+                    <Title heading={4}>AI 模型</Title>
                     <Paragraph type="secondary">
-                        Configure AI providers and models for Agent operations
+                        配置 AI Provider，供智能体和其他功能使用
                     </Paragraph>
                 </div>
                 <Space>
                     <Button icon={<IconRefresh />} onClick={() => refetch()}>
-                        Refresh
+                        刷新
                     </Button>
                     <Button
                         type="primary"
@@ -109,7 +109,7 @@ export default function ModelListPage() {
                             setModalOpen(true);
                         }}
                     >
-                        Add Provider
+                        添加 Provider
                     </Button>
                 </Space>
             </div>
@@ -132,7 +132,7 @@ export default function ModelListPage() {
                         pagination={false}
                     />
                 ) : (
-                    <Empty description="No AI providers configured yet." />
+                    <Empty description="暂无 AI Provider，请先添加。" />
                 )}
             </Card>
 

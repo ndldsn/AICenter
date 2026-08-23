@@ -18,20 +18,20 @@ export function Navbar() {
 
     const handleLogout = () => {
         logout();
-        Message.success('Logged out successfully');
+        Message.success('已退出登录');
         navigate('/login');
     };
 
     const dropList = (
         <Menu>
             <Menu.Item key="profile" onClick={() => navigate('/settings')}>
-                <IconUser /> Profile
+                <IconUser /> 个人资料
             </Menu.Item>
             <Menu.Item key="settings" onClick={() => navigate('/settings')}>
-                <IconSettings /> Settings
+                <IconSettings /> 设置
             </Menu.Item>
             <Menu.Item key="logout" onClick={handleLogout}>
-            <IconPoweroff /> Logout
+            <IconPoweroff /> 退出登录
             </Menu.Item>
         </Menu>
     );
@@ -49,7 +49,7 @@ export function Navbar() {
             }}
         >
             <div style={{ fontSize: 16, fontWeight: 600, color: 'var(--color-text-1)' }}>
-                AICenter Dashboard
+                AICenter 控制台
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
