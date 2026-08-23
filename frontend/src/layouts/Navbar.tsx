@@ -7,9 +7,11 @@ import {
     IconUser,
     IconPoweroff,
     IconSettings,
+    IconLanguage,
 } from '@arco-design/web-react/icon';
 import { useUIStore } from '@/stores/uiStore';
 import { useAuthStore } from '@/stores/authStore';
+import { i18n } from '@/utils/i18n';
 
 export function Navbar() {
     const navigate = useNavigate();
@@ -18,20 +20,20 @@ export function Navbar() {
 
     const handleLogout = () => {
         logout();
-        Message.success('已退出登录');
+        Message.success(i18n.t('navbar.logoutSuccess'));
         navigate('/login');
     };
 
     const dropList = (
         <Menu>
             <Menu.Item key="profile" onClick={() => navigate('/settings')}>
-                <IconUser /> 个人资料
+                <IconUser /> {i18n.t('navbar.profile')}
             </Menu.Item>
             <Menu.Item key="settings" onClick={() => navigate('/settings')}>
-                <IconSettings /> 设置
+                <IconSettings /> {i18n.t('navbar.settings')}
             </Menu.Item>
             <Menu.Item key="logout" onClick={handleLogout}>
-            <IconPoweroff /> 退出登录
+            <IconPoweroff /> {i18n.t('navbar.logout')}
             </Menu.Item>
         </Menu>
     );
@@ -49,7 +51,7 @@ export function Navbar() {
             }}
         >
             <div style={{ fontSize: 16, fontWeight: 600, color: 'var(--color-text-1)' }}>
-                AICenter 控制台
+                {i18n.t('navbar.brand')}
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -58,6 +60,16 @@ export function Navbar() {
                     icon={theme === 'light' ? <IconMoon /> : <IconSun />}
                     shape="circle"
                     onClick={toggleTheme}
+                />
+
+                {/* Language toggle */}
+                <Button
+                    icon={<IconLanguage />}
+                    shape="circle"
+                    onClick={() => {
+                        i18n.toggleLocale();
+                        window.location.reload();
+                    }}
                 />
 
                 {/* Notifications */}
