@@ -10,7 +10,6 @@ import (
 
 	"github.com/aicenter/aicenter/internal/ai"
 	"github.com/aicenter/aicenter/internal/runtime/engine"
-	"github.com/aicenter/aicenter/internal/runtime/tools"
 	"github.com/aicenter/aicenter/internal/service"
 	"github.com/gin-gonic/gin"
 )
@@ -127,88 +126,63 @@ func (h *AgentHandler) ChatRun(c *gin.Context) {
 		return defaultPlanText(prompt)
 	}
 
-	plan, err := exec.RunPlanner(ctx, agent.SystemPrompt, req.Query, plannerFn)
-	if err != nil {
-		_ = emit(ChatEvent{Type: "error", Data: map[string]string{"message": "planner error: " + err.Error()}})
+	_, runErr := exec.Run(ctx, agent.SystemPrompt, req.Query, plannerFn, engine.RunOptions{
+		MaxIterations: agent.MaxIterations,
+		OnStep: func(step engine.RunStep) error {
+			_ = emit(ChatEvent{Type: "plan", Data: engine.Plan{Text: step.Plan.Text, ToolCalls: step.Plan.ToolCalls}})
+
+			h.svc.AppendMessage(&service.AppendMessageReq{
+				SessionID: sessionID,
+				Role:      "assistant",
+				Content:   step.Plan.Text,
+				Metadata:  map[string]any{"phase": "plan", "done": step.Done},
+			})
+
+			for i, run := range step.ToolRuns {
+				_ = emit(ChatEvent{Type: "tool_run", Data: map[string]any{"name": run.Name, "args": run.Args}})
+				_ = emit(ChatEvent{Type: "tool_result", Data: run})
+
+				h.svc.AppendMessage(&service.AppendMessageReq{
+					SessionID: sessionID,
+					Role:      "tool",
+					ToolName:  run.Name,
+					ToolArgs:  run.Args,
+					ToolResult: map[string]any{
+						"status":  run.Result.Status,
+						"ok":      run.Result.Ok,
+						"message": run.Result.Message,
+						"payload": run.Result.Payload,
+					},
+					Metadata: map[string]any{"turn": i},
+				})
+			}
+
+			if step.Approval != nil {
+				if err := h.svc.CreateApproval(step.Approval); err != nil {
+					return emit(ChatEvent{Type: "error", Data: map[string]string{"message": "approval create failed: " + err.Error()}})
+				}
+				_ = emit(ChatEvent{Type: "approval_required", Data: step.Approval})
+				h.svc.AppendMessage(&service.AppendMessageReq{
+					SessionID: sessionID,
+					Role:      "tool",
+					ToolName:  step.Approval.ToolName,
+					ToolArgs:  step.Approval.ToolArgs,
+					ToolResult: map[string]any{
+						"status":      "pending_approval",
+						"approval_id": step.Approval.ID,
+					},
+					Metadata: map[string]any{"turn": len(step.ToolRuns)},
+				})
+			}
+			return nil
+		},
+	})
+	if runErr != nil {
+		_ = emit(ChatEvent{Type: "error", Data: map[string]string{"message": "run error: " + runErr.Error()}})
 		return
 	}
 
-	_ = emit(ChatEvent{Type: "plan", Data: engine.Plan{Text: plan.Text, ToolCalls: plan.ToolCalls}})
-
-	h.svc.AppendMessage(&service.AppendMessageReq{
-		SessionID: sessionID,
-		Role:      "assistant",
-		Content:   plan.Text,
-		Metadata:  map[string]any{"phase": "plan"},
-	})
-
-	for i, call := range plan.ToolCalls {
-		if ctx.Err() != nil {
-			_ = emit(ChatEvent{Type: "error", Data: map[string]string{"message": "client disconnected"}})
-			return
-		}
-
-		ok, needsApproval, _ := exec.Decide(call)
-
-		if needsApproval {
-			dry := exec.ExecuteTool(ctx, call, true)
-			approv := exec.BuildApprovalRequest(userID, call.Name, call.Args, dry)
-			if err := h.svc.CreateApproval(approv); err != nil {
-				_ = emit(ChatEvent{Type: "error", Data: map[string]string{"message": "approval create failed: " + err.Error()}})
-				return
-			}
-			_ = emit(ChatEvent{Type: "approval_required", Data: approv})
-
-			toolRuns = append(toolRuns, engine.ToolRun{Name: call.Name, Args: call.Args, Result: &tools.Result{Ok: false, Status: "pending_approval"}})
-			h.svc.AppendMessage(&service.AppendMessageReq{
-				SessionID: sessionID,
-				Role:      "tool",
-				ToolName:  call.Name,
-				ToolArgs:  call.Args,
-				ToolResult: map[string]any{
-					"status":         "pending_approval",
-					"approval_id":    approv.ID,
-					"dry_run_result": dry,
-				},
-				Metadata: map[string]any{"turn": i},
-			})
-			continue
-		}
-
-		if !ok {
-			toolRuns = append(toolRuns, engine.ToolRun{Name: call.Name, Args: call.Args, Result: &tools.Result{Ok: false, Status: "denied"}})
-			_ = emit(ChatEvent{Type: "tool_result", Data: engine.ToolRun{Name: call.Name, Args: call.Args, Result: &tools.Result{Ok: false, Status: "denied"}}})
-			continue
-		}
-
-		_ = emit(ChatEvent{Type: "tool_run", Data: map[string]any{"name": call.Name, "args": call.Args}})
-		res := exec.ExecuteTool(ctx, call, false)
-
-		h.svc.AppendMessage(&service.AppendMessageReq{
-			SessionID: sessionID,
-			Role:      "tool",
-			ToolName:  call.Name,
-			ToolArgs:  call.Args,
-			ToolResult: map[string]any{
-				"status":   res.Status,
-				"ok":       res.Ok,
-				"message":  res.Message,
-				"payload":  res.Payload,
-			},
-			Metadata: map[string]any{"turn": i},
-		})
-
-		run := engine.ToolRun{Name: call.Name, Args: call.Args, Result: res}
-		toolRuns = append(toolRuns, run)
-		_ = emit(ChatEvent{Type: "tool_result", Data: run})
-	}
-
-	finalText := plan.Text
-	if finalText == "" {
-		finalText = "done"
-	}
-	_ = emit(ChatEvent{Type: "final", Data: engine.Result{Text: finalText, ToolRuns: toolRuns, Final: true}})
-
+	_ = emit(ChatEvent{Type: "final", Data: engine.Result{Text: "", ToolRuns: toolRuns, Final: true}})
 	_ = sseWrite(c.Writer, "done", "[DONE]")
 }
 

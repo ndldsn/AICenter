@@ -115,86 +115,83 @@ func (s *AgentService) SendToSession(sessionID string, userMessage string, userI
 		return s.llmCall(agent.ModelID, prompt)
 	}
 
-	plan, err := exec.RunPlanner(context.Background(), agent.SystemPrompt, userMessage, plannerFn)
+	_, err = exec.Run(context.Background(), agent.SystemPrompt, userMessage, plannerFn, engine.RunOptions{
+		MaxIterations: agent.MaxIterations,
+		OnStep: func(step engine.RunStep) error {
+			// Persist the planner's text as an assistant message each turn.
+			_ = s.msgRepo.Append(&models.AgentMessage{
+				SessionID: sessionID, Role: "assistant", Content: step.Plan.Text,
+				Metadata: jsonMarshal(map[string]any{"phase": "plan", "done": step.Done}),
+			})
+			if step.Plan.Text != "" {
+				result.PlannedText = step.Plan.Text
+			}
+
+			for i, run := range step.ToolRuns {
+				result.ToolRuns = append(result.ToolRuns, ToolRun{
+					Name: run.Name, Args: run.Args, Result: run.Result,
+				})
+				_ = s.msgRepo.Append(&models.AgentMessage{
+					SessionID: sessionID, Role: "tool", ToolName: run.Name,
+					ToolArgs: run.Args, ToolResult: jsonMarshal(run.Result),
+					Metadata: jsonMarshal(map[string]any{"turn": i}),
+				})
+				if run.Result != nil && run.Result.Ok {
+					_ = s.auditRepo.Record(&repository.AuditEntry{
+						Username:       userID,
+						Action:         "tool_executed",
+						ResourceType:   "tool",
+						ResourceID:     run.Name,
+						ResourceName:   run.Name,
+						AgentSessionID: sessionID,
+						StatusCode:     200,
+					})
+				}
+			}
+
+			// A tool needs human approval: create the request, notify, and stop.
+			if step.Approval != nil {
+				step.Approval.RequestedBy = userID
+				if err := s.approvalRepo.Create(step.Approval); err != nil {
+					return err
+				}
+				result.Approval = step.Approval
+				result.RequiresApproval = true
+				_ = s.msgRepo.Append(&models.AgentMessage{
+					SessionID: sessionID, Role: "tool", ToolName: step.Approval.ToolName,
+					ToolArgs:   step.Approval.ToolArgs,
+					ToolResult: jsonMarshal(map[string]any{
+						"status":      "pending_approval",
+						"approval_id": step.Approval.ID,
+					}),
+				})
+				if s.notify != nil {
+					s.notify("approval.requested", "需要审批: "+step.Approval.ToolName, "warning",
+						"Agent 请求执行工具 "+step.Approval.ToolName+"，等待审批。",
+						map[string]string{
+							"approval_id": step.Approval.ID,
+							"tool":        step.Approval.ToolName,
+							"session_id":  sessionID,
+							"user_id":     userID,
+						})
+				}
+			}
+			return nil
+		},
+	})
 	if err != nil {
+		sess.Status = "failed"
+		_ = s.sessionRepo.UpdateStatus(sessionID, "failed")
 		return SessionResult{}, err
 	}
 
-	_ = s.msgRepo.Append(&models.AgentMessage{
-		SessionID: sessionID, Role: "assistant", Content: plan.Text,
-		Metadata: jsonMarshal(map[string]any{"phase": "plan"}),
-	})
-	result.PlannedText = plan.Text
-
-	for i, call := range plan.ToolCalls {
-		execute, needsApproval, _ := exec.Decide(call)
-		if !execute {
-			if needsApproval {
-				dry := exec.ExecuteTool(context.Background(), call, true)
-				approv := exec.BuildApprovalRequest(userID, call.Name, call.Args, dry)
-				if err := s.approvalRepo.Create(approv); err != nil {
-					return SessionResult{}, err
-				}
-				result.Approval = approv
-				_ = s.msgRepo.Append(&models.AgentMessage{
-					SessionID: sessionID, Role: "tool", ToolName: call.Name,
-					ToolArgs: call.Args,
-					ToolResult: jsonMarshal(map[string]any{
-						"status":         "pending_approval",
-						"approval_id":    approv.ID,
-						"dry_run_result": dry,
-					}),
-					Metadata: jsonMarshal(map[string]any{"turn": i}),
-				})
-				result.RequiresApproval = true
-				if s.notify != nil {
-					data := map[string]string{
-						"approval_id": approv.ID,
-						"tool":        call.Name,
-						"session_id":  sessionID,
-						"user_id":     userID,
-					}
-					s.notify("approval.requested", "需要审批: "+call.Name, "warning",
-						"Agent 请求执行工具 "+call.Name+"，等待审批。", data)
-				}
-				return result, nil
-			}
-			_ = s.msgRepo.Append(&models.AgentMessage{
-				SessionID: sessionID, Role: "tool", ToolName: call.Name,
-				ToolArgs:   call.Args,
-				ToolResult: jsonMarshal(map[string]any{"status": "denied"}),
-			})
-			result.ToolRuns = append(result.ToolRuns, ToolRun{
-				Name:   call.Name,
-				Args:   call.Args,
-				Result: &tools.Result{Ok: false, Status: "denied"},
-			})
-			continue
-		}
-
-		res := exec.ExecuteTool(context.Background(), call, false)
-		_ = s.msgRepo.Append(&models.AgentMessage{
-			SessionID: sessionID, Role: "tool", ToolName: call.Name,
-			ToolArgs: call.Args, ToolResult: jsonMarshal(res),
-		})
-		_ = s.auditRepo.Record(&repository.AuditEntry{
-			Username:       userID,
-			Action:         "tool_executed",
-			ResourceType:   "tool",
-			ResourceID:     call.Name,
-			ResourceName:   call.Name,
-			AgentSessionID: sessionID,
-			StatusCode:     200,
-		})
-		result.ToolRuns = append(result.ToolRuns, ToolRun{
-			Name:   call.Name,
-			Args:   call.Args,
-			Result: res,
-		})
+	if result.RequiresApproval {
+		sess.Status = "paused"
+		_ = s.sessionRepo.UpdateStatus(sessionID, "paused")
+	} else {
+		sess.Status = "completed"
+		_ = s.sessionRepo.UpdateStatus(sessionID, "completed")
 	}
-
-	sess.Status = "completed"
-	_ = s.sessionRepo.UpdateStatus(sessionID, "completed")
 	return result, nil
 }
 

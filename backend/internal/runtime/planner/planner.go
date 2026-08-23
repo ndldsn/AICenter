@@ -15,6 +15,15 @@ type ToolMessage struct {
 	ToolCalls []models.ToolCall
 }
 
+// Observation is a single tool execution result fed back to the LLM so it can
+// reason about what happened and decide the next step (the "observe" half of
+// the thought-act loop).
+type Observation struct {
+	ToolName string         `json:"tool_name"`
+	Args     map[string]any `json:"args,omitempty"`
+	Result   string         `json:"result"`
+}
+
 // Parse parses the assistant's raw JSON response into a ToolMessage.
 // Accepted shapes (best-effort):
 //   - {"text":"...","tool_calls":[{"name":"x","args":{...}}]}
@@ -55,13 +64,25 @@ func Parse(raw string) (*ToolMessage, error) {
 
 // BuildPrompt returns the system + last user message as a formatted prompt
 // suitable for a text-only LLM (the LLM then emits JSON with tool_calls).
-func BuildPrompt(system string, lastUser string, tools_ []*tools.Tool) string {
+// Prior tool observations (if any) are appended so the model can reason about
+// what already happened and decide the next step instead of repeating itself.
+func BuildPrompt(system string, lastUser string, tools_ []*tools.Tool, observations []Observation) string {
 	var buf strings.Builder
 	buf.WriteString(system)
 	buf.WriteString("\n\n## AVAILABLE TOOLS\n\n")
 	for _, t := range tools_ {
 		buf.WriteString(fmt.Sprintf("- %s: %s\n", t.Name, t.Description))
 	}
+
+	if len(observations) > 0 {
+		buf.WriteString("\n## TOOL RESULTS SO FAR\n\n")
+		for i, o := range observations {
+			argsJSON, _ := json.Marshal(o.Args)
+			buf.WriteString(fmt.Sprintf("%d. %s(args=%s) -> %s\n", i+1, o.ToolName, string(argsJSON), o.Result))
+		}
+		buf.WriteString("\nUse these results to continue. If the task is complete, respond with an empty tool_calls list and a final text answer.\n")
+	}
+
 	buf.WriteString(fmt.Sprintf("\n## USER QUERY\n%s\n", lastUser))
 	buf.WriteString("\nRespond as JSON with {\"text\": \"...\", \"tool_calls\": [{\"name\": ..., \"args\": {...}}]}. If no tool is needed, set tool_calls to [].")
 	return buf.String()
