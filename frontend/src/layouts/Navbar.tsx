@@ -11,29 +11,29 @@ import {
 } from '@arco-design/web-react/icon';
 import { useUIStore } from '@/stores/uiStore';
 import { useAuthStore } from '@/stores/authStore';
-import { i18n } from '@/utils/i18n';
 
 export function Navbar() {
     const navigate = useNavigate();
     const { theme, toggleTheme } = useUIStore();
     const { user, logout } = useAuthStore();
+    const t = useUIStore((s) => s.t);
 
     const handleLogout = () => {
         logout();
-        Message.success(i18n.t('navbar.logoutSuccess'));
+        Message.success(t('navbar.logoutSuccess'));
         navigate('/login');
     };
 
     const dropList = (
         <Menu>
             <Menu.Item key="profile" onClick={() => navigate('/settings')}>
-                <IconUser /> {i18n.t('navbar.profile')}
+                <IconUser /> {t('navbar.profile')}
             </Menu.Item>
             <Menu.Item key="settings" onClick={() => navigate('/settings')}>
-                <IconSettings /> {i18n.t('navbar.settings')}
+                <IconSettings /> {t('navbar.settings')}
             </Menu.Item>
             <Menu.Item key="logout" onClick={handleLogout}>
-            <IconPoweroff /> {i18n.t('navbar.logout')}
+            <IconPoweroff /> {t('navbar.logout')}
             </Menu.Item>
         </Menu>
     );
@@ -51,7 +51,7 @@ export function Navbar() {
             }}
         >
             <div style={{ fontSize: 16, fontWeight: 600, color: 'var(--color-text-1)' }}>
-                {i18n.t('navbar.brand')}
+                {t('navbar.brand')}
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -66,10 +66,7 @@ export function Navbar() {
                 <Button
                     icon={<IconLanguage />}
                     shape="circle"
-                    onClick={() => {
-                        i18n.toggleLocale();
-                        window.location.reload();
-                    }}
+                    onClick={() => useUIStore.getState().toggleLocale()}
                 />
 
                 {/* Notifications */}

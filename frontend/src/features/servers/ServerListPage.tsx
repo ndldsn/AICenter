@@ -23,6 +23,7 @@ import {
 import { useServers, useDeleteServer } from './hooks';
 import { AddServerModal } from './AddServerModal';
 import { Server } from '@/services/servers';
+import { useUIStore } from '@/stores/uiStore';
 
 const { Title, Paragraph } = Typography;
 
@@ -32,6 +33,7 @@ export default function ServerListPage() {
     const [addModalVisible, setAddModalVisible] = useState(false);
     const [editingServer, setEditingServer] = useState<Server | null>(null);
     const navigate = useNavigate();
+    const t = useUIStore((s) => s.t);
 
     const { data, isLoading, refetch } = useServers(page, limit);
     const deleteMutation = useDeleteServer();
@@ -44,9 +46,15 @@ export default function ServerListPage() {
         }
     };
 
+    const statusConfig: Record<string, { color: string; label: string }> = {
+        online: { color: 'green', label: t('servers.status.online') },
+        offline: { color: 'red', label: t('servers.status.offline') },
+        unknown: { color: 'gray', label: t('servers.status.unknown') },
+    };
+
     const columns = [
         {
-            title: '名称',
+            title: t('common.name'),
             dataIndex: 'name',
             render: (name: string, record: Server) => (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -63,14 +71,9 @@ export default function ServerListPage() {
             ),
         },
         {
-            title: '状态',
+            title: t('common.status'),
             dataIndex: 'status',
             render: (status: string, _record: Server) => {
-                const statusConfig: Record<string, { color: string; label: string }> = {
-                    online: { color: 'green', label: 'Online' },
-                    offline: { color: 'red', label: 'Offline' },
-                    unknown: { color: 'gray', label: 'Unknown' },
-                };
                 const config = statusConfig[status] || statusConfig.unknown;
                 return (
                     <Tag color={config.color}>
@@ -99,7 +102,7 @@ export default function ServerListPage() {
             dataIndex: 'agent_connected',
             render: (connected: boolean) => (
                 <Tag color={connected ? 'green' : 'gray'}>
-                    {connected ? '已连接' : '未连接'}
+                    {connected ? t('servers.connected') : t('servers.disconnected')}
                 </Tag>
             ),
         },
@@ -128,10 +131,10 @@ export default function ServerListPage() {
             },
         },
         {
-            title: '最近在线',
+            title: t('servers.lastSeen', '最近在线'),
             dataIndex: 'last_heartbeat',
             render: (heartbeat: string | undefined) => {
-                if (!heartbeat) return <span style={{ color: 'var(--color-text-3)' }}>从未</span>;
+                if (!heartbeat) return <span style={{ color: 'var(--color-text-3)' }}>{t('servers.never')}</span>;
                 return (
                     <span>
                         {new Date(heartbeat).toLocaleString('zh-CN', {
@@ -145,18 +148,18 @@ export default function ServerListPage() {
             },
         },
         {
-            title: '操作',
+            title: t('common.actions'),
             dataIndex: 'id',
             render: (id: string, record: Server) => (
                 <Space>
-                    <Tooltip content="测试连接">
+                    <Tooltip content={t('servers.testConnection')}>
                         <Button
                             size="small"
                             icon={<IconPlayCircle />}
-                            onClick={() => Message.info('正在测试连接...')}
+                            onClick={() => Message.info(t('servers.testing'))}
                         />
                     </Tooltip>
-                    <Tooltip content="编辑">
+                    <Tooltip content={t('common.edit')}>
                         <Button
                             size="small"
                             icon={<IconEdit />}
@@ -166,22 +169,22 @@ export default function ServerListPage() {
                             }}
                         />
                     </Tooltip>
-                    <Tooltip content="复制 SSH 命令">
+                    <Tooltip content={t('servers.copySSH', '复制 SSH 命令')}>
                         <Button
                             size="small"
                             icon={<IconCopy />}
                             onClick={() => {
                                 const cmd = `ssh ${record.username}@${record.host} -p ${record.port}`;
                                 navigator.clipboard.writeText(cmd);
-                                Message.success('SSH 命令已复制');
+                                Message.success(t('servers.copied'));
                             }}
                         />
                     </Tooltip>
                     <Popconfirm
-                        title="确定删除该服务器？"
+                        title={t('servers.confirmDelete')}
                         onOk={() => handleDelete(id)}
-                        okText="删除"
-                        cancelText="取消"
+                        okText={t('servers.delete')}
+                        cancelText={t('servers.cancel')}
                     >
                         <Button size="small" icon={<IconDelete />} status="danger" />
                     </Popconfirm>
@@ -194,14 +197,14 @@ export default function ServerListPage() {
         <Space direction="vertical" size={20} style={{ width: '100%' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
-                    <Title heading={4}>服务器</Title>
+                    <Title heading={4}>{t('servers.title')}</Title>
                     <Paragraph type="secondary">
-                        管理你的 Linux 服务器并监控其状态
+                        {t('servers.subtitle')}
                     </Paragraph>
                 </div>
                 <Space>
                     <Button icon={<IconRefresh />} onClick={() => refetch()}>
-                        刷新
+                        {t('common.refresh')}
                     </Button>
                     <Button
                         type="primary"
@@ -211,7 +214,7 @@ export default function ServerListPage() {
                             setAddModalVisible(true);
                         }}
                     >
-                        添加服务器
+                        {t('servers.add')}
                     </Button>
                 </Space>
             </div>
@@ -232,7 +235,7 @@ export default function ServerListPage() {
                     }}
                     noDataElement={
                         <div style={{ padding: 40, textAlign: 'center', color: 'var(--color-text-3)' }}>
-                            暂无服务器，点击“添加服务器”开始。
+                            {t('servers.empty')}
                         </div>
                     }
                     rowKey="id"

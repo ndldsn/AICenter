@@ -1,6 +1,7 @@
 import { Typography, Card, Grid, Space, Button } from '@arco-design/web-react';
 import { IconDesktop, IconCloud, IconRobot, IconApps } from '@arco-design/web-react/icon';
 import { useNavigate } from 'react-router-dom';
+import { useUIStore } from '@/stores/uiStore';
 
 const { Title, Paragraph } = Typography;
 const { Row, Col } = Grid;
@@ -44,12 +45,13 @@ function StatCard({ title, value, icon, color }: StatCardProps) {
 
 export default function DashboardPage() {
     const navigate = useNavigate();
+    const t = useUIStore((s) => s.t);
     return (
         <Space direction="vertical" size={20} style={{ width: '100%' }}>
             <div>
-                <Title heading={4}>仪表盘</Title>
+                <Title heading={4}>{t('dashboard.title')}</Title>
                 <Paragraph type="secondary">
-                    欢迎使用 AICenter - 你的 AI 运维控制中心
+                    {t('dashboard.welcome')}
                 </Paragraph>
             </div>
 
@@ -57,7 +59,7 @@ export default function DashboardPage() {
             <Row gutter={16}>
                 <Col span={6}>
                     <StatCard
-                        title="服务器"
+                        title={t('sidebar.servers')}
                         value={0}
                         icon={<IconDesktop />}
                         color="rgb(var(--primary-6))"
@@ -65,7 +67,7 @@ export default function DashboardPage() {
                 </Col>
                 <Col span={6}>
                     <StatCard
-                        title="容器"
+                        title={t('sidebar.docker')}
                         value={0}
                         icon={<IconCloud />}
                         color="rgb(var(--success-6))"
@@ -73,7 +75,7 @@ export default function DashboardPage() {
                 </Col>
                 <Col span={6}>
                     <StatCard
-                        title="智能体"
+                        title={t('sidebar.agents')}
                         value={0}
                         icon={<IconRobot />}
                         color="rgb(var(--warning-6))"
@@ -81,7 +83,7 @@ export default function DashboardPage() {
                 </Col>
                 <Col span={6}>
                     <StatCard
-                        title="AI 模型"
+                        title={t('sidebar.ai')}
                         value={0}
                         icon={<IconApps />}
                         color="rgb(var(--orange-6))"
@@ -90,30 +92,30 @@ export default function DashboardPage() {
             </Row>
 
             {/* Quick Actions */}
-            <Card title="快速操作">
+            <Card title={t('dashboard.quickActions')}>
                 <Space>
                     <Button size="small" type="outline" onClick={() => navigate('/servers')}>
-                        添加服务器
+                        {t('dashboard.addServer')}
                     </Button>
                     <Button size="small" type="outline" onClick={() => navigate('/docker')}>
-                        部署容器
+                        {t('dashboard.deployContainer')}
                     </Button>
                     <Button size="small" type="outline" onClick={() => navigate('/agents')}>
-                        创建智能体
+                        {t('dashboard.createAgent')}
                     </Button>
                     <Button size="small" type="outline" onClick={() => navigate('/ai')}>
-                        添加 Provider
+                        {t('dashboard.addProvider')}
                     </Button>
                 </Space>
             </Card>
 
             {/* System Status */}
-            <Card title="系统状态">
+            <Card title={t('dashboard.systemStatus')}>
                 <Paragraph>
-                    AICenter 运行中。尚未连接任何服务器。
+                    {t('dashboard.systemOnline')}
                 </Paragraph>
                 <Paragraph type="secondary">
-                    添加第一台服务器即可开始监控和管理基础设施。
+                    {t('dashboard.systemHint')}
                 </Paragraph>
             </Card>
         </Space>

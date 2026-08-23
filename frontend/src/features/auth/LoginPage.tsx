@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { Card, Form, Input, Button } from '@arco-design/web-react';
 import { useNavigate } from 'react-router-dom';
+import { Card, Form, Input, Button } from '@arco-design/web-react';
 import { authApi } from '@/services/agent';
 import { useAuthStore } from '@/stores/authStore';
+import { useUIStore } from '@/stores/uiStore';
 
 export default function LoginPage() {
     const [form] = Form.useForm();
@@ -11,6 +12,7 @@ export default function LoginPage() {
     const [error, setError] = useState('');
     const setTokens = useAuthStore((s) => s.setTokens);
     const setUser = useAuthStore((s) => s.setUser);
+    const t = useUIStore((s) => s.t);
 
     const submit = async (values: { username: string; password: string }) => {
         setError('');
@@ -22,10 +24,10 @@ export default function LoginPage() {
                 if (res.user) setUser(res.user);
                 navigate('/');
             } else {
-                setError('登录失败：未返回 token');
+                setError(t('login.error.invalid'));
             }
         } catch (e: any) {
-            setError(e?.message || '登录失败');
+            setError(e?.message || t('login.error.invalid'));
         } finally {
             setLoading(false);
         }
@@ -33,17 +35,17 @@ export default function LoginPage() {
 
     return (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: 'var(--color-fill-2)' }}>
-            <Card title="AICenter 登录" style={{ width: 360 }}>
+            <Card title={t('login.title')} style={{ width: 360 }}>
                 <Form form={form} layout="vertical" onSubmit={submit} autoComplete="off">
-                    <Form.Item label="用户名" field="username" rules={[{ required: true, message: '请输入用户名' }]}>
+                    <Form.Item label={t('login.username')} field="username" rules={[{ required: true, message: t('login.error.empty') }]}>
                         <Input placeholder="admin" />
                     </Form.Item>
-                    <Form.Item label="密码" field="password" rules={[{ required: true, message: '请输入密码' }]}>
+                    <Form.Item label={t('login.password')} field="password" rules={[{ required: true, message: t('login.error.empty') }]}>
                         <Input.Password placeholder="Admin@123!" />
                     </Form.Item>
                     {error ? <div style={{ color: 'red', marginBottom: 12 }}>{error}</div> : null}
                     <Button type="primary" htmlType="submit" loading={loading} long>
-                        登录
+                        {loading ? t('login.loading') : t('login.submit')}
                     </Button>
                 </Form>
             </Card>

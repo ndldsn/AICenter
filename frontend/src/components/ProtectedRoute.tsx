@@ -2,6 +2,7 @@ import { Navigate } from 'react-router-dom';
 import { useAuthStore } from '@/stores/authStore';
 import { ROUTE_PERMISSIONS, type Permission } from '@/utils/permissions';
 import { useCanAccess } from '@/hooks/useHasPermission';
+import { useUIStore } from '@/stores/uiStore';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -9,9 +10,10 @@ interface ProtectedRouteProps {
 }
 
 export function ProtectedRoute({ children, path }: ProtectedRouteProps) {
-  const { isAuthenticated, user } = useAuthStore();
+  const { isAuthenticated } = useAuthStore();
   const required = ROUTE_PERMISSIONS[path];
   const can = useCanAccess((required || '') as Permission);
+  const t = useUIStore((s) => s.t);
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
@@ -29,12 +31,11 @@ export function ProtectedRoute({ children, path }: ProtectedRouteProps) {
           gap: 16,
         }}
       >
-        <h2>403 — Forbidden</h2>
+        <h2>{t('auth.403')}</h2>
         <p style={{ color: 'var(--muted-foreground)' }}>
-          Your role ({user?.role || 'unknown'}) does not have permission to
-          access this page.
+          {t('auth.403Hint')}
         </p>
-        <button onClick={() => window.history.back()}>Go Back</button>
+        <button onClick={() => window.history.back()}>{t('auth.back')}</button>
       </div>
     );
   }

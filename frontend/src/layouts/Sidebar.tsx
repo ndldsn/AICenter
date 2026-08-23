@@ -37,11 +37,11 @@ export function Sidebar() {
     const { sidebarCollapsed } = useUIStore();
     const { user } = useAuthStore();
     const hasPerm = useHasPermission();
+    const t = useUIStore((s) => s.t);
     const [selectedKeys, setSelectedKeys] = useState<string[]>([location.pathname]);
 
     const visibleItems = routeMeta.filter((item) => {
         if (!item.permission) return true;
-        // Superadmin / admin bypass
         if (user?.role === 'superadmin' || user?.role === 'admin') return true;
         return hasPerm;
     });
@@ -99,7 +99,7 @@ export function Sidebar() {
                     <Menu.Item key={item.path}>
                         <span style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                             {iconMap[item.icon]}
-                            {!sidebarCollapsed && item.label}
+                            {!sidebarCollapsed && t(`sidebar.${item.label.toLowerCase()}`, item.label)}
                         </span>
                     </Menu.Item>
                 ))}
