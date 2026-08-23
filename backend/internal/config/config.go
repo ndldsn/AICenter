@@ -52,7 +52,7 @@ type WebSocketConfig struct {
 // JWT_SECRET is REQUIRED and never given a default: running without it would
 // let anyone forge tokens, so we fail fast instead of silently shipping unsafe.
 func Load() (*Config, error) {
-	port, _ := strconv.Atoi(getEnv("SERVER_PORT", "8080"))
+	port, _ := strconv.Atoi(getEnv("SERVER_PORT", "8081"))
 	logLevel := getEnv("LOG_LEVEL", "info")
 	dbURL := getEnv("DATABASE_URL", "sqlite://data/aicenter.db")
 	authSecret := os.Getenv("JWT_SECRET")

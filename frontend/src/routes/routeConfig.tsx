@@ -48,6 +48,7 @@ export const routesConfig = [
     { path: '/docker', element: <ProtectedRoute path="/docker"><DockerDashboardPage /></ProtectedRoute> },
     { path: '/models', element: <ProtectedRoute path="/models"><ModelListPage /></ProtectedRoute> },
     { path: '/agents', element: <ProtectedRoute path="/agents"><AgentListPage /></ProtectedRoute> },
+    { path: '/agents/:id/chat', element: <ProtectedRoute path="/agents"><AgentChatPage /></ProtectedRoute> },
     { path: '/tasks', element: <ProtectedRoute path="/tasks"><TaskListPage /></ProtectedRoute> },
     { path: '/monitor', element: <ProtectedRoute path="/monitor"><MonitorDashboardPage /></ProtectedRoute> },
     { path: '/notifications', element: <ProtectedRoute path="/notifications"><NotificationCenterPage /></ProtectedRoute> },

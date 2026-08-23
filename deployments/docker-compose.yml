@@ -6,13 +6,11 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     ports:
-      - "8080:8080"
+      - "8081:8081"
     volumes:
       - ./data:/app/data
-    environment:
-      - DATABASE_URL=sqlite://data/aicenter.db
-      - JWT_SECRET=dev-secret-key-change-in-production
-      - LOG_LEVEL=info
+    env_file:
+      - ./backend/.env
     restart: unless-stopped
 
   frontend:

@@ -1,0 +1,15 @@
+# AICenter root ignores
+.env
+.env.local
+.env.*.local
+*.log
+data/
+dist/
+node_modules/
+vendor/
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+*.swp
+*.db
