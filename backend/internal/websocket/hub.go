@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/aicenter/aicenter/internal/auth"
 	"github.com/gorilla/websocket"
 	"go.uber.org/zap"
 )
@@ -153,8 +154,21 @@ func (h *Hub) Broadcast(message []byte) {
 	}
 }
 
-// ServeWs handles websocket requests from the client
-func ServeWs(hub *Hub, w http.ResponseWriter, r *http.Request) {
+// ServeWs handles websocket requests from the client, authenticating via
+// a JWT access token passed as the ?token= query parameter.
+func ServeWs(hub *Hub, jwtSecret string, w http.ResponseWriter, r *http.Request) {
+	// Require a valid JWT access token via query param.
+	tokenStr := r.URL.Query().Get("token")
+	if tokenStr == "" {
+		http.Error(w, "missing token", http.StatusUnauthorized)
+		return
+	}
+	claims, err := auth.ValidateAccessToken(tokenStr, jwtSecret)
+	if err != nil {
+		http.Error(w, "invalid token", http.StatusUnauthorized)
+		return
+	}
+
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		hub.log.Error("WebSocket upgrade failed", zap.Error(err))
@@ -167,8 +181,14 @@ func ServeWs(hub *Hub, w http.ResponseWriter, r *http.Request) {
 		send:     make(chan []byte, 256),
 		rooms:    make(map[string]bool),
 		clientID: generateClientID(),
-		userID:   r.URL.Query().Get("userID"),
+		userID:   claims.UserID,
 	}
+
+	hub.log.Info("WebSocket client connected",
+		zap.String("clientID", client.clientID),
+		zap.String("userID", claims.UserID),
+		zap.String("username", claims.Username),
+	)
 
 	hub.register <- client
 

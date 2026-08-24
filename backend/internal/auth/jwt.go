@@ -64,6 +64,20 @@ func CheckPasswordHash(password, hash string) bool {
 	return err == nil
 }
 
+// ValidateAccessToken parses and validates an access-token JWT, returning the
+// embedded Claims. Used by WebSocket endpoints that receive the token via
+// query parameter rather than the standard Authorization header.
+func ValidateAccessToken(tokenStr, secret string) (*Claims, error) {
+	claims := &Claims{}
+	token, err := jwt.ParseWithClaims(tokenStr, claims, func(token *jwt.Token) (interface{}, error) {
+		return []byte(secret), nil
+	})
+	if err != nil || !token.Valid {
+		return nil, fmt.Errorf("invalid access token: %w", err)
+	}
+	return claims, nil
+}
+
 // ValidateRefreshToken verifies the refresh token's signature and expiry,
 // returning the Subject claim (the user ID). Caller owns secret + expiry.
 func ValidateRefreshToken(tokenStr, secret string) (string, error) {

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/aicenter/aicenter/internal/auth"
 	"github.com/aicenter/aicenter/internal/terminal"
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
@@ -18,12 +19,13 @@ var terminalUpgrader = websocket.Upgrader{
 
 // TerminalHandler exposes REST session control + the WebSocket bridge.
 type TerminalHandler struct {
-	mgr *terminal.Manager
-	log *zap.Logger
+	mgr       *terminal.Manager
+	log       *zap.Logger
+	jwtSecret string
 }
 
-func NewTerminalHandler(mgr *terminal.Manager, log *zap.Logger) *TerminalHandler {
-	return &TerminalHandler{mgr: mgr, log: log}
+func NewTerminalHandler(mgr *terminal.Manager, log *zap.Logger, jwtSecret string) *TerminalHandler {
+	return &TerminalHandler{mgr: mgr, log: log, jwtSecret: jwtSecret}
 }
 
 // CreateSession POST /terminal/sessions  {server_id?, shell?, cols?, rows?}
@@ -57,8 +59,20 @@ func (h *TerminalHandler) CloseSession(c *gin.Context) {
 	respOK(c, gin.H{"closed": c.Param("id")})
 }
 
-// Bridge ws://.../ws/terminal?session=<id>  streams PTY in/out.
+// Bridge ws://.../ws/terminal?session=<id>&token=<jwt>  streams PTY in/out.
+// Requires a valid JWT access token via the ?token= query parameter.
 func (h *TerminalHandler) Bridge(w http.ResponseWriter, r *http.Request) {
+	tokenStr := r.URL.Query().Get("token")
+	if tokenStr == "" {
+		http.Error(w, "missing token", http.StatusUnauthorized)
+		return
+	}
+	claims, err := auth.ValidateAccessToken(tokenStr, h.jwtSecret)
+	if err != nil {
+		http.Error(w, "invalid token", http.StatusUnauthorized)
+		return
+	}
+
 	sessionID := r.URL.Query().Get("session")
 	if sessionID == "" {
 		http.Error(w, "session required", http.StatusBadRequest)
@@ -69,6 +83,12 @@ func (h *TerminalHandler) Bridge(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "session not found", http.StatusNotFound)
 		return
 	}
+
+	h.log.Info("terminal ws bridge opened",
+		zap.String("session", sessionID),
+		zap.String("userID", claims.UserID),
+		zap.String("username", claims.Username),
+	)
 
 	conn, err := terminalUpgrader.Upgrade(w, r, nil)
 	if err != nil {

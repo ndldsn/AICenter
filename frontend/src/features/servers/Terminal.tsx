@@ -34,7 +34,8 @@ export default function Terminal({ sessionId, wsBaseUrl, onClose }: TerminalProp
 
         const proto = window.location.protocol === 'https:' ? 'wss' : 'ws';
         const base = wsBaseUrl || `${proto}://${window.location.host}`;
-        const ws = new WebSocket(`${base}/ws/terminal?session=${encodeURIComponent(sessionId)}`);
+        const token = localStorage.getItem('access_token') || '';
+        const ws = new WebSocket(`${base}/ws/terminal?session=${encodeURIComponent(sessionId)}&token=${encodeURIComponent(token)}`);
         wsRef.current = ws;
         ws.onopen = () => {
             term.focus();

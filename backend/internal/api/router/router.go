@@ -50,9 +50,9 @@ func Setup(cfg *config.Config, db *sql.DB, hub *websocket.Hub, log *zap.Logger) 
 		c.JSON(200, gin.H{"status": "ok", "service": "aicenter"})
 	})
 
-	// WebSocket endpoint (no auth for now - TODO: auth via query param)
+	// WebSocket endpoint (authenticated via ?token= query param)
 	r.GET("/ws", func(c *gin.Context) {
-		websocket.ServeWs(hub, c.Writer, c.Request)
+		websocket.ServeWs(hub, cfg.Auth.Secret, c.Writer, c.Request)
 	})
 
 	// Protected routes: real JWT bearer auth.
@@ -160,7 +160,7 @@ func Setup(cfg *config.Config, db *sql.DB, hub *websocket.Hub, log *zap.Logger) 
 
 		// Web Terminal (完善与优化 Phase 7.1)
 		terminalMgr := terminal.NewManager(log)
-		terminalHandler := handler.NewTerminalHandler(terminalMgr, log)
+		terminalHandler := handler.NewTerminalHandler(terminalMgr, log, cfg.Auth.Secret)
 		prot.POST("/terminal/sessions", terminalHandler.CreateSession)
 		prot.GET("/terminal/sessions", terminalHandler.ListSessions)
 		prot.POST("/terminal/sessions/:id/close", terminalHandler.CloseSession)
