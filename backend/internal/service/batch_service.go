@@ -1,18 +1,43 @@
 package service
 
 import (
-	"bytes"
-	"context"
-	"fmt"
-	"os/exec"
-	"strings"
-	"sync"
-	"time"
+    "bytes"
+    "context"
+    "fmt"
+    "strconv"
+    "runtime"
+    "os/exec"
+    "strings"
+    "sync"
+    "time"
 
-	"github.com/aicenter/aicenter/internal/models"
-	"github.com/aicenter/aicenter/internal/pkg/ssh"
-	"github.com/aicenter/aicenter/internal/repository"
+    "github.com/aicenter/aicenter/internal/models"
+    "github.com/aicenter/aicenter/internal/pkg/ssh"
+    "github.com/aicenter/aicenter/internal/repository"
 )
+
+// shellCommand returns the executable and args pair appropriate for the
+// current operating system. On Unix it uses `sh -c`; on Windows it uses
+// `cmd.exe /c` so that commands like `echo`, `exit`, and `timeout` work
+// consistently in unit tests and in production.
+func shellCommand(command string) (string, []string) {
+    if runtime.GOOS == "windows" {
+        return "cmd.exe", []string{"/c", command}
+    }
+    return "sh", []string{"-c", command}
+}
+
+// blockCommand returns a shell command string that blocks for approximately
+// `seconds` seconds. The returned string is safe to pass to shellCommand.
+// On Windows it uses `ping 127.0.0.1` because `sleep` is not a native
+// cmd.exe built-in. On Unix it uses `sleep`.
+func blockCommand(seconds int) string {
+    if runtime.GOOS == "windows" {
+        // ping -n N sends N echo requests, one per second.
+        return "ping 127.0.0.1 -n " + strconv.Itoa(seconds+1) + " >nul"
+    }
+    return "sleep " + strconv.Itoa(seconds)
+}
 
 // BatchService runs a single command across many servers in parallel and
 // collects per-server results.
@@ -161,8 +186,9 @@ func runShell(ctx context.Context, sv *models.Server, command string) (stdout, s
 // via a deadline watcher that kills the whole process tree (including children
 // spawned by the shell, e.g. `sleep`) so CombinedOutput returns promptly.
 func runLocal(ctx context.Context, command string) (string, string, *int, error) {
-	c := exec.Command("sh", "-c", command)
-	setProcessGroup(c)
+    shell, args := shellCommand(command)
+    c := exec.Command(shell, args...)
+    setProcessGroup(c)
 	var outBuf bytes.Buffer
 	c.Stdout = &outBuf
 	c.Stderr = &outBuf

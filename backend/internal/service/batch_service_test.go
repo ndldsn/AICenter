@@ -71,12 +71,12 @@ func TestBatchCommand_NonZeroExitCode(t *testing.T) {
 }
 
 func TestBatchCommand_TimeoutSurfacesAsFailed(t *testing.T) {
-	s := NewBatchServiceWithStore(&fakeLister{
-		servers: []*models.Server{{ID: "s1", Name: "local", Host: "localhost", Port: 22}},
-	})
-	res := s.BatchCommand(context.Background(), &BatchRequest{
-		Command: "sleep 10", ServerIDs: []string{"s1"}, Timeout: 1,
-	})
+    s := NewBatchServiceWithStore(&fakeLister{
+        servers: []*models.Server{{ID: "s1", Name: "local", Host: "localhost", Port: 22}},
+    })
+    res := s.BatchCommand(context.Background(), &BatchRequest{
+        Command: blockCommand(10), ServerIDs: []string{"s1"}, Timeout: 1,
+    })
 	if len(res) != 1 {
 		t.Fatalf("expected 1 result, got %d", len(res))
 	}
