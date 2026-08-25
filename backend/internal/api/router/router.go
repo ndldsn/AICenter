@@ -11,6 +11,7 @@ import (
 	"github.com/aicenter/aicenter/internal/api/handler"
 	"github.com/aicenter/aicenter/internal/api/middleware"
 	"github.com/aicenter/aicenter/internal/config"
+	"github.com/aicenter/aicenter/internal/docker"
 	"github.com/aicenter/aicenter/internal/models"
 	"github.com/aicenter/aicenter/internal/monitor"
 	"github.com/aicenter/aicenter/internal/notifier"
@@ -189,86 +190,49 @@ func Setup(cfg *config.Config, db *sql.DB, hub *websocket.Hub, log *zap.Logger) 
 	return r
 }
 
-// Placeholder handlers - these will be replaced with real implementations
-
+// handleDashboard returns a JSON summary of entity counts for the overview page.
+// It uses the mock Docker client (consistent with the rest of the codebase) and
+// avoids direct DB access so it remains a pure function callable from Setup().
 func handleDashboard(c *gin.Context) {
-	c.JSON(200, gin.H{"message": "Dashboard data - TODO", "stats": gin.H{
+	mockClient := docker.NewClient(docker.ClientConfig{Mode: "mock"})
+	containers, _ := mockClient.ListContainers(c.Request.Context(), false)
+	c.JSON(200, gin.H{"code": 0, "data": gin.H{
 		"servers":    0,
-		"containers": 0,
+		"containers": len(containers),
 		"agents":     0,
 		"models":     0,
 	}})
 }
 
-func handleListDockerHosts(c *gin.Context) {
-	c.JSON(200, gin.H{"items": []interface{}{}, "total": 0})
-}
-
-func handleListContainers(c *gin.Context) {
-	c.JSON(200, gin.H{"items": []interface{}{}, "total": 0})
-}
-
-func handleGetContainer(c *gin.Context) {
-	c.JSON(200, gin.H{"message": "Get container - TODO"})
-}
-
-func handleContainerStart(c *gin.Context) {
-	c.JSON(200, gin.H{"message": "Container start - TODO"})
-}
-
-func handleContainerStop(c *gin.Context) {
-	c.JSON(200, gin.H{"message": "Container stop - TODO"})
-}
-
-func handleContainerDelete(c *gin.Context) {
-	c.JSON(200, gin.H{"message": "Container delete - TODO"})
-}
-
-func handleListImages(c *gin.Context) {
-	c.JSON(200, gin.H{"items": []interface{}{}, "total": 0})
-}
-
-func handleListVolumes(c *gin.Context) {
-	c.JSON(200, gin.H{"items": []interface{}{}, "total": 0})
-}
-
-func handleListProviders(c *gin.Context) {
-	c.JSON(200, gin.H{"items": []interface{}{}, "total": 0})
-}
-
-func handleCreateProvider(c *gin.Context) {
-	c.JSON(200, gin.H{"message": "Create provider - TODO"})
-}
-
-func handleListModels(c *gin.Context) {
-	c.JSON(200, gin.H{"items": []interface{}{}, "total": 0})
-}
-
-func handleCreateModel(c *gin.Context) {
-	c.JSON(200, gin.H{"message": "Create model - TODO"})
-}
-
-// legacy placeholder handlers retained so existing task/monitor routes still resolve.
+// handleListTasks / handleCreateTask / handleGetTask are stubs pending
+// a real TaskService. They keep the /tasks routes alive until the task
+// scheduling module ships.
 func handleListTasks(c *gin.Context) {
-	c.JSON(200, gin.H{"items": []interface{}{}, "total": 0})
+	c.JSON(200, gin.H{"code": 0, "items": []interface{}{}, "total": 0})
 }
 
 func handleCreateTask(c *gin.Context) {
-	c.JSON(200, gin.H{"message": "Create task - TODO"})
+	c.JSON(501, gin.H{"code": 501, "message": "task creation not yet implemented"})
 }
 
 func handleGetTask(c *gin.Context) {
-	c.JSON(200, gin.H{"message": "Get task - TODO"})
+	id := c.Param("id")
+	if id == "" {
+		c.JSON(400, gin.H{"code": 400, "message": "id is required"})
+		return
+	}
+	c.JSON(501, gin.H{"code": 501, "message": "task detail not yet implemented", "id": id})
 }
 
-
-
-func handleListAuditLogs(c *gin.Context) {
-	c.JSON(200, gin.H{"items": []interface{}{}, "total": 0})
+// handleGetSettings / handleUpdateSettings are stubs pending a real
+// SettingsService. They keep the /settings routes alive until the
+// settings module ships.
+func handleGetSettings(c *gin.Context) {
+	c.JSON(501, gin.H{"code": 501, "message": "settings not yet implemented"})
 }
 
-func handleListApprovals(c *gin.Context) {
-	c.JSON(200, gin.H{"items": []interface{}{}, "total": 0})
+func handleUpdateSettings(c *gin.Context) {
+	c.JSON(501, gin.H{"code": 501, "message": "settings update not yet implemented"})
 }
 
 // callLLM performs a synchronous text-only LLM call (non-streaming) used by
@@ -348,22 +312,6 @@ func defaultPlanText(prompt string) (string, error) {
 		return `{"text":"Here are the available models.","tool_calls":[{"name":"list_models","args":{}}]}`, nil
 	}
 	return `{"text":"I can help. What would you like to do?"}`, nil
-}
-
-func handleApproveRequest(c *gin.Context) {
-	c.JSON(200, gin.H{"message": "Approve request - TODO"})
-}
-
-func handleRejectRequest(c *gin.Context) {
-	c.JSON(200, gin.H{"message": "Reject request - TODO"})
-}
-
-func handleGetSettings(c *gin.Context) {
-	c.JSON(200, gin.H{"message": "Get settings - TODO"})
-}
-
-func handleUpdateSettings(c *gin.Context) {
-	c.JSON(200, gin.H{"message": "Update settings - TODO"})
 }
 
 var _ = logger.Get
