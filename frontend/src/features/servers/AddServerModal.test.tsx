@@ -2,7 +2,6 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { AddServerModal } from './AddServerModal';
 import { useCreateServer, useTestNewConnection } from './hooks';
-import { Message } from '@arco-design/web-react';
 
 vi.mock('@arco-design/web-react', async () => {
     const actual = await vi.importActual('@arco-design/web-react') as any;
@@ -39,13 +38,13 @@ describe('AddServerModal', () => {
     });
 
     it('does not render when visible is false', () => {
-        const { container } = render(<AddServerModal visible={false} onClose={() => {}} />);
+        const { container } = render(<AddServerModal visible={false} onClose={() => {}} onSuccess={() => {}} />);
         expect(container.firstChild).toBeNull();
     });
 
     it('calls onClose when close button is clicked', () => {
         const onClose = vi.fn();
-        render(<AddServerModal visible={true} onClose={onClose} />);
+        render(<AddServerModal visible={true} onClose={onClose} onSuccess={() => {}} />);
         // Modal has a close icon button; locate by aria-label fallback or role.
         const closeBtn = screen.getByRole('button', { name: /close/i });
         fireEvent.click(closeBtn);

@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { renderHook, waitFor } from '@testing-library/react';
 import React from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { useServers, useServer, useCreateServer, useDeleteServer } from './hooks';
+import { useServers, useServer, useDeleteServer } from './hooks';
 import { serverApi } from '@/services/servers';
 
 vi.mock('@arco-design/web-react', () => ({
@@ -21,7 +21,6 @@ vi.mock('@/services/servers', () => ({
 
 const mockedList = serverApi.list as ReturnType<typeof vi.fn>;
 const mockedGet = serverApi.get as ReturnType<typeof vi.fn>;
-const mockedCreate = serverApi.create as ReturnType<typeof vi.fn>;
 const mockedRemove = serverApi.remove as ReturnType<typeof vi.fn>;
 
 function wrapper({ children }: { children: React.ReactNode }) {

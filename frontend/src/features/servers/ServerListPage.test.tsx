@@ -1,10 +1,8 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
 import ServerListPage from './ServerListPage';
 import { useServers, useDeleteServer } from './hooks';
-import { useT } from '@/stores/uiStore';
-import { Message } from '@arco-design/web-react';
 
 vi.mock('@arco-design/web-react', async () => {
     const actual = await vi.importActual('@arco-design/web-react') as any;

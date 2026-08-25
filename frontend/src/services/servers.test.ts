@@ -9,10 +9,10 @@ vi.mock('./api', () => ({
     apiDelete: vi.fn(),
 }));
 
-const mockedApiGet = apiGet as jest.Mock;
-const mockedApiPost = apiPost as jest.Mock;
-const mockedApiPut = apiPut as jest.Mock;
-const mockedApiDelete = apiDelete as jest.Mock;
+const mockedApiGet = apiGet as ReturnType<typeof vi.fn>;
+const mockedApiPost = apiPost as ReturnType<typeof vi.fn>;
+const mockedApiPut = apiPut as ReturnType<typeof vi.fn>;
+const mockedApiDelete = apiDelete as ReturnType<typeof vi.fn>;
 
 describe('servers.ts', () => {
     beforeEach(() => {
@@ -33,8 +33,8 @@ describe('servers.ts', () => {
 
     it('serverApi.create calls apiPost with correct data', async () => {
         mockedApiPost.mockResolvedValueOnce({ code: 0, data: { id: 'new' } });
-        await serverApi.create({ name: 'srv1', host: '1.2.3.4', auth_type: 'password' });
-        expect(mockedApiPost).toHaveBeenCalledWith('/servers', { name: 'srv1', host: '1.2.3.4', auth_type: 'password' });
+        await serverApi.create({ name: 'srv1', host: '1.2.3.4', username: 'root', auth_type: 'password' });
+        expect(mockedApiPost).toHaveBeenCalledWith('/servers', { name: 'srv1', host: '1.2.3.4', username: 'root', auth_type: 'password' });
     });
 
     it('serverApi.update calls apiPut with correct URL and data', async () => {
