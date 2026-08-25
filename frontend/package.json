@@ -3,14 +3,14 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
-    "scripts": {
-        "dev": "vite",
-        "build": "tsc -b && vite build",
-        "test": "vitest run",
-        "test:watch": "vitest",
-        "lint": "oxlint",
-        "preview": "vite preview"
-    },
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "oxlint",
+    "preview": "vite preview"
+  },
   "dependencies": {
     "@arco-design/web-react": "^2.66.16",
     "@monaco-editor/react": "^4.7.0",
@@ -45,6 +45,6 @@
     "prettier": "^3.9.6",
     "typescript": "~6.0.2",
     "vite": "^8.2.0",
-    "vitest": "^4.1.11"
+    "vitest": "^3.2.7"
   }
 }
