@@ -13,3 +13,4 @@ vendor/
 Thumbs.db
 *.swp
 *.db
+.joycode/
