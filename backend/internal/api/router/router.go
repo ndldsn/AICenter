@@ -193,82 +193,29 @@ func Setup(cfg *config.Config, db *sql.DB, hub *websocket.Hub, log *zap.Logger) 
 
 func handleDashboard(c *gin.Context) {
 	c.JSON(200, gin.H{"message": "Dashboard data - TODO", "stats": gin.H{
-		"servers":    0,
-		"containers": 0,
-		"agents":     0,
-		"models":     0,
+		"servers": 0,
+		"agents":  0,
 	}})
 }
 
-func handleListDockerHosts(c *gin.Context) {
-	c.JSON(200, gin.H{"items": []interface{}{}, "total": 0})
-}
 
-func handleListContainers(c *gin.Context) {
-	c.JSON(200, gin.H{"items": []interface{}{}, "total": 0})
-}
-
-func handleGetContainer(c *gin.Context) {
-	c.JSON(200, gin.H{"message": "Get container - TODO"})
-}
-
-func handleContainerStart(c *gin.Context) {
-	c.JSON(200, gin.H{"message": "Container start - TODO"})
-}
-
-func handleContainerStop(c *gin.Context) {
-	c.JSON(200, gin.H{"message": "Container stop - TODO"})
-}
-
-func handleContainerDelete(c *gin.Context) {
-	c.JSON(200, gin.H{"message": "Container delete - TODO"})
-}
-
-func handleListImages(c *gin.Context) {
-	c.JSON(200, gin.H{"items": []interface{}{}, "total": 0})
-}
-
-func handleListVolumes(c *gin.Context) {
-	c.JSON(200, gin.H{"items": []interface{}{}, "total": 0})
-}
-
-func handleListProviders(c *gin.Context) {
-	c.JSON(200, gin.H{"items": []interface{}{}, "total": 0})
-}
-
-func handleCreateProvider(c *gin.Context) {
-	c.JSON(200, gin.H{"message": "Create provider - TODO"})
-}
-
-func handleListModels(c *gin.Context) {
-	c.JSON(200, gin.H{"items": []interface{}{}, "total": 0})
-}
-
-func handleCreateModel(c *gin.Context) {
-	c.JSON(200, gin.H{"message": "Create model - TODO"})
-}
-
-// legacy placeholder handlers retained so existing task/monitor routes still resolve.
+// Active placeholder handlers -- replaced by real handlers elsewhere.
 func handleListTasks(c *gin.Context) {
-	c.JSON(200, gin.H{"items": []interface{}{}, "total": 0})
+	c.JSON(200, gin.H{"items": []gin.H{}, "total": 0})
 }
 
 func handleCreateTask(c *gin.Context) {
-	c.JSON(200, gin.H{"message": "Create task - TODO"})
+	c.JSON(501, gin.H{"code": 501, "message": "not yet implemented"})
 }
 
 func handleGetTask(c *gin.Context) {
-	c.JSON(200, gin.H{"message": "Get task - TODO"})
-}
+	id := c.Param("id")
+	if strings.TrimSpace(id) == "" {
+		c.JSON(400, gin.H{"code": 400, "message": "missing task id"})
+		return
+	}
+	c.JSON(501, gin.H{"code": 501, "message": "not yet implemented"})
 
-
-
-func handleListAuditLogs(c *gin.Context) {
-	c.JSON(200, gin.H{"items": []interface{}{}, "total": 0})
-}
-
-func handleListApprovals(c *gin.Context) {
-	c.JSON(200, gin.H{"items": []interface{}{}, "total": 0})
 }
 
 // callLLM performs a synchronous text-only LLM call (non-streaming) used by
@@ -350,20 +297,13 @@ func defaultPlanText(prompt string) (string, error) {
 	return `{"text":"I can help. What would you like to do?"}`, nil
 }
 
-func handleApproveRequest(c *gin.Context) {
-	c.JSON(200, gin.H{"message": "Approve request - TODO"})
-}
-
-func handleRejectRequest(c *gin.Context) {
-	c.JSON(200, gin.H{"message": "Reject request - TODO"})
-}
 
 func handleGetSettings(c *gin.Context) {
-	c.JSON(200, gin.H{"message": "Get settings - TODO"})
+	c.JSON(501, gin.H{"code": 501, "message": "not yet implemented"})
 }
 
 func handleUpdateSettings(c *gin.Context) {
-	c.JSON(200, gin.H{"message": "Update settings - TODO"})
+	c.JSON(501, gin.H{"code": 501, "message": "not yet implemented"})
 }
 
 var _ = logger.Get
