@@ -9,15 +9,31 @@ vi.mock('@arco-design/web-react', () => ({
     Message: { success: vi.fn() },
 }));
 
-vi.mock('@/services/servers', () => ({
-    serverApi: {
-        list: vi.fn(),
-        get: vi.fn(),
-        create: vi.fn(),
-        remove: vi.fn(),
-        update: vi.fn(),
-    },
-}));
+// Mock the low-level api module so every serverApi method is fully isolated
+// from the real axios instance and its interceptors.
+vi.mock('@/services/api', () => ({
+    apiGet:    vi.fn(),
+    apiPost:   vi.fn(),
+    apiPut:    vi.fn(),
+    apiPatch:  vi.fn(),
+    apiDelete: vi.fn(),
+}))
+
+
+vi.mock('@/services/servers', () => ({ serverApi: {
+    list:               vi.fn(),
+    get:                vi.fn(),
+    create:             vi.fn(),
+    remove:             vi.fn(),
+    update:             vi.fn(),
+    testConnection:     vi.fn(),
+    getMetrics:         vi.fn(),
+    generateAgentToken: vi.fn(),
+    listGroups:         vi.fn(),
+    createGroup:        vi.fn(),
+    deleteGroup:        vi.fn(),
+    batchCommand:       vi.fn(),
+}, }))
 
 const mockedList = serverApi.list as ReturnType<typeof vi.fn>;
 const mockedGet = serverApi.get as ReturnType<typeof vi.fn>;
