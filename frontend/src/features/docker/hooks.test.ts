@@ -5,7 +5,6 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
     useDockerHosts,
     useContainers,
-    useContainerLogs,
     useStartContainer,
     useStopContainer,
     useDeleteContainer,
