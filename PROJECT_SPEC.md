@@ -1,4 +1,10 @@
-# AICenter Development Rules
+# AICenter Project Tech Spec
+
+AICenter 项目级技术规范。
+
+本文件是多 Agent 协作规范（AGENTS.md）的项目级补充。
+
+每个 Agent 在阅读 AGENTS.md 后，必须阅读本文件再开始任务。
 
 你正在开发 AICenter。
 
