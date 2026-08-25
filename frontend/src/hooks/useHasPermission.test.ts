@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import { useHasPermission, useCanAccess } from './useHasPermission';
 import { useAuthStore } from '@/stores/authStore';

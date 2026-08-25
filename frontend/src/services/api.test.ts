@@ -79,8 +79,8 @@ function stubResponse(value: any) { _mockState.setResponse(value); }
 
 const fakeLocation = {
     pathname: '/',
-    assign:    vi.fn<[string], void>(),
-    replace:   vi.fn<[string], void>(),
+    assign:    vi.fn(),
+    replace:   vi.fn(),
     reload:    vi.fn(),
     _hrefValue: 'http://localhost/' as string,
     get href() { return this._hrefValue; },
@@ -98,7 +98,7 @@ beforeEach(() => {
     localStorage.clear();
     fakeLocation.pathname = '/';
     fakeLocation._hrefValue = 'http://localhost/';
-    fakeLocation.assign = vi.fn<[string], void>();
+    fakeLocation.assign = vi.fn();
     _mockState._reset();
 });
 
