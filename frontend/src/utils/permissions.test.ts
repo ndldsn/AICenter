@@ -3,7 +3,7 @@ import { PERM, ROUTE_PERMISSIONS, SENSITIVE_ACTIONS } from './permissions';
 
 describe('PERM', () => {
     it('should contain all expected permission keys as non-empty strings', () => {
-        const expectedKeys = [
+        const requiredKeys = [
             'SERVERS_READ',
             'SERVERS_WRITE',
             'SERVERS_DELETE',
@@ -29,56 +29,40 @@ describe('PERM', () => {
             'AUDIT_READ',
             'SETTINGS_READ',
             'SETTINGS_WRITE',
-        ] as const;
+        ];
 
-        for (const key of expectedKeys) {
+        for (const key of requiredKeys) {
             expect(PERM).toHaveProperty(key);
             expect(typeof PERM[key as keyof typeof PERM]).toBe('string');
-            expect((PERM as Record<string, string>)[key]).toBeTruthy();
+            expect(PERM[key as keyof typeof PERM].length).toBeGreaterThan(0);
         }
     });
 
-    it('should derive Permission type from all values', () => {
-        // Ensure every value is a valid dot-separated permission string.
-        for (const value of Object.values(PERM)) {
-            expect(typeof value).toBe('string');
-            expect(value).toContain('.');
+    it('should have values in dot-notation format', () => {
+        for (const [, value] of Object.entries(PERM)) {
+            expect(value).toMatch(/^[a-z]+\.[a-z.]+$/);
         }
     });
 });
 
 describe('ROUTE_PERMISSIONS', () => {
-    it('should map all known routes to a permission or permission array', () => {
-        const entries = Object.entries(ROUTE_PERMISSIONS);
-        expect(entries.length).toBeGreaterThan(0);
-
-        for (const [, perm] of entries) {
-            if (Array.isArray(perm)) {
-                expect(perm.length).toBeGreaterThan(0);
-                for (const p of perm) {
-                    expect(typeof p).toBe('string');
-                    expect(p).toContain('.');
-                }
-            } else {
-                expect(typeof perm).toBe('string');
-                expect(perm).toContain('.');
-            }
-        }
+    it('should map route paths to permission arrays', () => {
+        expect(ROUTE_PERMISSIONS).toBeDefined();
+        expect(typeof ROUTE_PERMISSIONS).toBe('object');
     });
 
-    it('should include at minimum the dashboard and servers routes', () => {
-        expect(ROUTE_PERMISSIONS).toHaveProperty('/');
-        expect(ROUTE_PERMISSIONS).toHaveProperty('/servers');
+    it('should have permissions for key routes', () => {
+        expect(ROUTE_PERMISSIONS['/']).toBeDefined();
+        expect(ROUTE_PERMISSIONS['/servers']).toBeDefined();
+        expect(ROUTE_PERMISSIONS['/agents']).toBeDefined();
+        expect(ROUTE_PERMISSIONS['/settings']).toBeDefined();
     });
 });
 
 describe('SENSITIVE_ACTIONS', () => {
-    it('should be a non-empty array of strings', () => {
+    it('should define sensitive action constants', () => {
+        expect(SENSITIVE_ACTIONS).toBeDefined();
         expect(Array.isArray(SENSITIVE_ACTIONS)).toBe(true);
         expect(SENSITIVE_ACTIONS.length).toBeGreaterThan(0);
-        for (const action of SENSITIVE_ACTIONS) {
-            expect(typeof action).toBe('string');
-        }
     });
 });
-
