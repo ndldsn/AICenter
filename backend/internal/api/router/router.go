@@ -71,8 +71,31 @@ func Setup(cfg *config.Config, db *sql.DB, hub *websocket.Hub, log *zap.Logger) 
 	{
 		authHandler.RegisterProtectedRoutes(prot)
 
-		// Dashboard
-		prot.GET("/dashboard", handleDashboard)
+		// Dashboard — aggregate basic server/container/agent/model stats.
+		// Implemented as a closure so repositories created in Setup() are
+		// captured without changing the function signature.
+		_dashServerRepo := repository.NewServerRepository()
+		_dashAgentRepo := repository.NewAgentRepository(db)
+		_dashModelRepo := repository.NewAIModelRepository(db)
+		prot.GET("/dashboard", func(c *gin.Context) {
+			servers, _, sErr := _dashServerRepo.List(0, 1)
+			agents, aErr := _dashAgentRepo.List(nil)
+			models, mErr := _dashModelRepo.ListByProvider("")
+			if sErr != nil || aErr != nil || mErr != nil {
+				log.Error("dashboard stats query failed",
+					zap.Error(sErr),
+					zap.Error(aErr),
+					zap.Error(mErr))
+				c.JSON(500, gin.H{"code": 500, "message": "internal error"})
+				return
+			}
+			c.JSON(200, gin.H{"stats": gin.H{
+				"servers":    len(servers),
+				"containers": 0, // TODO: integrate docker service count
+				"agents":     len(agents),
+				"models":     len(models),
+			}})
+		})
 
 		// Servers - using real handler
 		serverHandler := handler.NewServerHandler()
@@ -189,87 +212,26 @@ func Setup(cfg *config.Config, db *sql.DB, hub *websocket.Hub, log *zap.Logger) 
 	return r
 }
 
-// Placeholder handlers - these will be replaced with real implementations
-
-func handleDashboard(c *gin.Context) {
-	c.JSON(200, gin.H{"message": "Dashboard data - TODO", "stats": gin.H{
-		"servers":    0,
-		"containers": 0,
-		"agents":     0,
-		"models":     0,
-	}})
-}
-
-func handleListDockerHosts(c *gin.Context) {
-	c.JSON(200, gin.H{"items": []interface{}{}, "total": 0})
-}
-
-func handleListContainers(c *gin.Context) {
-	c.JSON(200, gin.H{"items": []interface{}{}, "total": 0})
-}
-
-func handleGetContainer(c *gin.Context) {
-	c.JSON(200, gin.H{"message": "Get container - TODO"})
-}
-
-func handleContainerStart(c *gin.Context) {
-	c.JSON(200, gin.H{"message": "Container start - TODO"})
-}
-
-func handleContainerStop(c *gin.Context) {
-	c.JSON(200, gin.H{"message": "Container stop - TODO"})
-}
-
-func handleContainerDelete(c *gin.Context) {
-	c.JSON(200, gin.H{"message": "Container delete - TODO"})
-}
-
-func handleListImages(c *gin.Context) {
-	c.JSON(200, gin.H{"items": []interface{}{}, "total": 0})
-}
-
-func handleListVolumes(c *gin.Context) {
-	c.JSON(200, gin.H{"items": []interface{}{}, "total": 0})
-}
-
-func handleListProviders(c *gin.Context) {
-	c.JSON(200, gin.H{"items": []interface{}{}, "total": 0})
-}
-
-func handleCreateProvider(c *gin.Context) {
-	c.JSON(200, gin.H{"message": "Create provider - TODO"})
-}
-
-func handleListModels(c *gin.Context) {
-	c.JSON(200, gin.H{"items": []interface{}{}, "total": 0})
-}
-
-func handleCreateModel(c *gin.Context) {
-	c.JSON(200, gin.H{"message": "Create model - TODO"})
-}
-
 // legacy placeholder handlers retained so existing task/monitor routes still resolve.
 func handleListTasks(c *gin.Context) {
 	c.JSON(200, gin.H{"items": []interface{}{}, "total": 0})
 }
 
 func handleCreateTask(c *gin.Context) {
-	c.JSON(200, gin.H{"message": "Create task - TODO"})
+	// TaskService is not yet implemented.
+	c.JSON(501, gin.H{"code": 501, "message": "not yet implemented"})
 }
 
 func handleGetTask(c *gin.Context) {
-	c.JSON(200, gin.H{"message": "Get task - TODO"})
+	// TaskService is not yet implemented.
+	id := c.Param("id")
+	if strings.TrimSpace(id) == "" {
+		c.JSON(400, gin.H{"code": 400, "message": "missing task id"})
+		return
+	}
+	c.JSON(501, gin.H{"code": 501, "message": "not yet implemented"})
 }
 
-
-
-func handleListAuditLogs(c *gin.Context) {
-	c.JSON(200, gin.H{"items": []interface{}{}, "total": 0})
-}
-
-func handleListApprovals(c *gin.Context) {
-	c.JSON(200, gin.H{"items": []interface{}{}, "total": 0})
-}
 
 // callLLM performs a synchronous text-only LLM call (non-streaming) used by
 // the agent planner. It tries an enabled openai-compatible provider and
@@ -350,20 +312,15 @@ func defaultPlanText(prompt string) (string, error) {
 	return `{"text":"I can help. What would you like to do?"}`, nil
 }
 
-func handleApproveRequest(c *gin.Context) {
-	c.JSON(200, gin.H{"message": "Approve request - TODO"})
-}
-
-func handleRejectRequest(c *gin.Context) {
-	c.JSON(200, gin.H{"message": "Reject request - TODO"})
-}
 
 func handleGetSettings(c *gin.Context) {
-	c.JSON(200, gin.H{"message": "Get settings - TODO"})
+	// Settings service not yet implemented.
+	c.JSON(501, gin.H{"code": 501, "message": "not yet implemented"})
 }
 
 func handleUpdateSettings(c *gin.Context) {
-	c.JSON(200, gin.H{"message": "Update settings - TODO"})
+	// Settings service not yet implemented.
+	c.JSON(501, gin.H{"code": 501, "message": "not yet implemented"})
 }
 
 var _ = logger.Get
