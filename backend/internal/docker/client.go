@@ -52,10 +52,11 @@ type ClientConfig struct {
 }
 
 // NewClient returns a Client based on the config. Unknown modes fall back to mock
-// so the API always works during development.
 func NewClient(cfg ClientConfig) Client {
 	if cfg.Mode == "real" {
-		return NewRealClient(cfg.Host)
+		rc, err := NewRealClient(cfg.Host)
+		if err != nil { panic(err) }
+		return rc
 	}
 	return NewMockClient()
 }
