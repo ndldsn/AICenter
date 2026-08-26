@@ -3,6 +3,7 @@ package service
 import (
     "bytes"
     "context"
+	"github.com/aicenter/aicenter/internal/pkg/crypto"
     "fmt"
     "strconv"
     "runtime"
@@ -223,14 +224,15 @@ func runLocal(ctx context.Context, command string) (string, string, *int, error)
 // command. PasswordEnc / PrivateKeyEnc are passed through (the model still
 // TODOs encryption, matching the existing TestConnection path).
 func runSSH(ctx context.Context, sv *models.Server, command string) (string, string, *int, error) {
+	password, _ := crypto.Decrypt(sv.PasswordEnc)
+	privateKey, _ := crypto.Decrypt(sv.PrivateKeyEnc)
 	cfg := &ssh.Config{
 		Host:       sv.Host,
 		Port:       sv.Port,
 		Username:   sv.Username,
 		AuthType:   sv.AuthType,
-		Password:   sv.PasswordEnc,
-		PrivateKey: sv.PrivateKeyEnc,
-		Timeout:    10 * time.Second,
+		Password:   password,
+		PrivateKey: privateKey,
 	}
 	client := ssh.NewClient(cfg)
 	if err := client.Connect(); err != nil {
