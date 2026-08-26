@@ -1,6 +1,7 @@
 package service
 
 import (
+	"crypto/rand"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -8,25 +9,36 @@ import (
 
 	"github.com/aicenter/aicenter/internal/models"
 	"github.com/aicenter/aicenter/internal/pkg/cache"
+	"github.com/aicenter/aicenter/internal/pkg/crypto"
 	"github.com/aicenter/aicenter/internal/pkg/ssh"
 	"github.com/aicenter/aicenter/internal/repository"
 )
 
 // ServerService handles server business logic
 type ServerService struct {
-	repo  *repository.ServerRepository
-	cache cache.Store
+	repo      *repository.ServerRepository
+	cache     cache.Store
+	encryptFn func(string) (string, error)
 }
 
 // NewServerService creates a new server service
 func NewServerService() *ServerService {
-	return &ServerService{repo: repository.NewServerRepository()}
+	return NewServerServiceWithEncrypt(nil)
+}
+
+// NewServerServiceWithEncrypt creates a server service with a custom encrypt
+// function. If encryptFn is nil, crypto.Encrypt (AES-256-GCM) is used.
+func NewServerServiceWithEncrypt(encryptFn func(string) (string, error)) *ServerService {
+	if encryptFn == nil {
+		encryptFn = crypto.Encrypt
+	}
+	return &ServerService{repo: repository.NewServerRepository(), encryptFn: encryptFn}
 }
 
 // NewServerServiceWithCache creates a new server service with a cache store
 // for hot read paths (server list, get-by-id, groups).
 func NewServerServiceWithCache(c cache.Store) *ServerService {
-	s := NewServerService()
+	s := NewServerServiceWithEncrypt(nil)
 	if c == nil {
 		c = cache.NewMemory(512)
 	}
@@ -51,6 +63,16 @@ func (s *ServerService) invalidateServer(id string) {
 	}
 }
 
+// encrypt applies s.encryptFn; returns the plaintext unchanged on error so
+// callers can decide how to handle partial failures.
+func (s *ServerService) encrypt(v string) string {
+	enc, err := s.encryptFn(v)
+	if err != nil {
+		return v
+	}
+	return enc
+}
+
 // CreateServer creates a new server
 func (s *ServerService) CreateServer(req *CreateServerRequest) (*models.Server, error) {
 	server := &models.Server{
@@ -59,8 +81,8 @@ func (s *ServerService) CreateServer(req *CreateServerRequest) (*models.Server, 
 		Port:     req.Port,
 		Username: req.Username,
 		AuthType: req.AuthType,
-		PasswordEnc: req.Password,       // TODO: encrypt
-		PrivateKeyEnc: req.PrivateKey,   // TODO: encrypt
+		PasswordEnc:   s.encrypt(req.Password),
+		PrivateKeyEnc: s.encrypt(req.PrivateKey),
 		Tags:     req.Tags,
 	}
 	if req.GroupID != "" {
@@ -132,10 +154,10 @@ func (s *ServerService) UpdateServer(id string, req *UpdateServerRequest) error 
 		updates["auth_type"] = req.AuthType
 	}
 	if req.Password != "" {
-		updates["password_enc"] = req.Password
+		updates["password_enc"] = s.encrypt(req.Password)
 	}
 	if req.PrivateKey != "" {
-		updates["private_key_enc"] = req.PrivateKey
+		updates["private_key_enc"] = s.encrypt(req.PrivateKey)
 	}
 	if req.GroupID != "" {
 		updates["group_id"] = req.GroupID
@@ -198,13 +220,15 @@ func (s *ServerService) testConnection(server *models.Server) (*ConnectionTestRe
 	result.SSHBanner = banner
 
 	// Test full SSH connection
+	password, _ := crypto.Decrypt(server.PasswordEnc)
+	privateKey, _ := crypto.Decrypt(server.PrivateKeyEnc)
 	cfg := &ssh.Config{
 		Host:       server.Host,
 		Port:       server.Port,
 		Username:   server.Username,
 		AuthType:   server.AuthType,
-		Password:   server.PasswordEnc,
-		PrivateKey: server.PrivateKeyEnc,
+		Password:   password,
+		PrivateKey: privateKey,
 		Timeout:    10 * time.Second,
 	}
 
@@ -344,7 +368,10 @@ func (s *ServerService) DeleteServerGroup(id string) error {
 
 // GenerateAgentToken generates a new agent registration token
 func (s *ServerService) GenerateAgentToken(serverID string) (string, error) {
-	// TODO: Generate secure token and save to server record
-	token := fmt.Sprintf("agent-%s-%d", serverID[:8], time.Now().Unix())
+	buf := make([]byte, 16)
+	if _, err := rand.Read(buf); err != nil {
+		return "", fmt.Errorf("generate agent token: %w", err)
+	}
+	token := fmt.Sprintf("agent-%x", buf)
 	return token, nil
 }
