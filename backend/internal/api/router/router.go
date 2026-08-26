@@ -1,4 +1,4 @@
-﻿package router
+package router
 
 import (
 	"context"
@@ -78,9 +78,17 @@ func Setup(cfg *config.Config, db *sql.DB, hub *websocket.Hub, log *zap.Logger) 
 		_dashAgentRepo := repository.NewAgentRepository(db)
 		_dashModelRepo := repository.NewAIModelRepository(db)
 		prot.GET("/dashboard", func(c *gin.Context) {
-			servers, _, _ := _dashServerRepo.List(0, 1)
-			agents, _ := _dashAgentRepo.List(nil)
-			models, _ := _dashModelRepo.ListByProvider("")
+			servers, _, sErr := _dashServerRepo.List(0, 1)
+			agents, aErr := _dashAgentRepo.List(nil)
+			models, mErr := _dashModelRepo.ListByProvider("")
+			if sErr != nil || aErr != nil || mErr != nil {
+				log.Error("dashboard stats query failed",
+					zap.Error(sErr),
+					zap.Error(aErr),
+					zap.Error(mErr))
+				c.JSON(500, gin.H{"code": 500, "message": "internal error"})
+				return
+			}
 			c.JSON(200, gin.H{"stats": gin.H{
 				"servers":    len(servers),
 				"containers": 0, // TODO: integrate docker service count
@@ -304,15 +312,6 @@ func defaultPlanText(prompt string) (string, error) {
 	return `{"text":"I can help. What would you like to do?"}`, nil
 }
 
-func handleApproveRequest(c *gin.Context) {
-	// Approvals service not yet implemented.
-	c.JSON(501, gin.H{"code": 501, "message": "not yet implemented"})
-}
-
-func handleRejectRequest(c *gin.Context) {
-	// Approvals service not yet implemented.
-	c.JSON(501, gin.H{"code": 501, "message": "not yet implemented"})
-}
 
 func handleGetSettings(c *gin.Context) {
 	// Settings service not yet implemented.
