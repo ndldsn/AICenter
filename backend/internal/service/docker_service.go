@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"os"
 	"time"
 
@@ -36,12 +37,16 @@ type DockerService struct {
 // DOCKER_MODE env var ("mock" by default) so the same code path serves both
 // development (mock) and production (real daemon) without branching in handlers.
 // bus may be nil; events are then dropped silently (unit tests, standalone use).
-func NewDockerService(bus EventPublisher) *DockerService {
+func NewDockerService(bus EventPublisher) (*DockerService, error) {
 	mode := os.Getenv("DOCKER_MODE")
 	if mode == "" {
 		mode = "mock"
 	}
-	return &DockerService{client: docker.NewClient(docker.ClientConfig{Mode: mode}), bus: bus}
+	cli, err := docker.NewClient(docker.ClientConfig{Mode: mode})
+	if err != nil {
+		return nil, fmt.Errorf("create docker client: %w", err)
+	}
+	return &DockerService{client: cli, bus: bus}, nil
 }
 
 // emit publishes a docker change event to the WebSocket room (nil-safe).
