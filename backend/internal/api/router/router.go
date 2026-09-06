@@ -101,14 +101,14 @@ func Setup(cfg *config.Config, db *sql.DB, hub *websocket.Hub, log *zap.Logger) 
 		serverHandler := handler.NewServerHandler()
 		serverHandler.RegisterRoutes(prot, middleware.JWTAuth(cfg.Auth.Secret))
 
-	// Docker (Phase 3 - real handler)
-	dockerSvc, dErr := service.NewDockerService(hub)
-	if dErr != nil {
-		log.Error("failed to initialise docker service", zap.Error(dErr))
-	} else {
-		dockerHandler := handler.NewDockerHandler(dockerSvc)
-		dockerHandler.RegisterRoutes(prot, middleware.JWTAuth(cfg.Auth.Secret))
-	}
+		// Docker (Phase 3 - real handler)
+		dockerSvc, dErr := service.NewDockerService(hub)
+		if dErr != nil {
+			log.Error("failed to initialise docker service", zap.Error(dErr))
+		} else {
+			dockerHandler := handler.NewDockerHandler(dockerSvc)
+			dockerHandler.RegisterRoutes(prot, middleware.JWTAuth(cfg.Auth.Secret))
+		}
 
 		// AI Providers & Models (Phase 4 - real handler)
 		aiService := service.NewAIService(
